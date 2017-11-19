@@ -3,6 +3,8 @@ A simple bot I made because I wanted my friends to stop deleting their messages.
 
 It reposts all the messages from one channel to another channel, which can be in another server if you have the right permissions.
 
+Sadly it only reposts backward from the latest message. It's impossible to go forward because you can't get the first message of a channel with the API.
+
 ## Usage
 1. [Create your app](https://discordapp.com/developers/applications/me)
 2. Click `Create a Bot User`
