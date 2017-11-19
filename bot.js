@@ -5,7 +5,7 @@ console.log("LOADING LIBRARIES...");
 const Discord = require("discord.js");
 const client = new Discord.Client();
 
-client.login("MzgxMzc2MDc3ODk1MDQxMDI0.DPGPxg.tSUaD1DXPQZshlXGVBOvtbiJKsA");
+client.login("<SECRET_BOT_TOKEN>");
 
 client.on("ready", function() {
 	client.user.setGame("on " + client.guilds.size + " servers");
