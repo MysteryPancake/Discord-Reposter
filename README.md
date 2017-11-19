@@ -11,7 +11,7 @@ At the moment it goes backward from the latest message sent. When I use [lastMes
 3. Copy your bot's secret token and [paste it on this line](https://github.com/MysteryPancake/Discord-Reposter/blob/master/bot.js#L8)
 4. Go to `https://discordapp.com/oauth2/authorize?client_id=CLIENT_ID&scope=bot` but replace `CLIENT_ID` with your app's client ID
 5. [Install node.js](https://nodejs.org/en/download)
-6. [Install discord.js](https://github.com/hydrabolt/discord.js): `npm i -S discord.js`
+6. [Install discord.js](https://github.com/hydrabolt/discord.js): `npm install discord.js`
 7. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/bot.js): `node bot.js`
 8. On the Discord website, find the channel you want to repost from, and copy the last number of the URL
 9. On the Discord website, find the channel you want to repost to, and message `repost <CHANNEL_ID>`, with the channel ID being the number you copied
