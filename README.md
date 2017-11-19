@@ -14,5 +14,5 @@ At the moment it goes backward from the latest message sent. When I use [lastMes
 6. [Install discord.js](https://github.com/hydrabolt/discord.js): `npm install discord.js`
 7. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/bot.js): `node bot.js`
 8. On the Discord website, find the channel you want to repost from, and copy the last number of the URL
-9. On the Discord website, find the channel you want to repost to, and message `repost <CHANNEL_ID>`, with the channel ID being the number you copied
+9. Find the channel you want to repost to, and in that channel, say `repost <CHANNEL_ID>`, with the channel ID being the number you copied
 10. Hope it works
