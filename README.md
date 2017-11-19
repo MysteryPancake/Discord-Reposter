@@ -1,9 +1,9 @@
 # Discord Reposter
 A simple bot I made because I wanted my friends to stop deleting their messages.
 
-It reposts all the messages from one channel to another channel, which can be in another server if you have the right permissions.
+It reposts all the messages from one channel to another channel, which can even be in another server.
 
-Sadly it only reposts backward from the latest message. It's impossible to go forward because you can't get the first message of a channel with the API.
+It reposts backward from the newest message. It's impossible to go forward from the oldest message because [discord.js](https://github.com/hydrabolt/discord.js) won't let me.
 
 ## Usage
 1. [Create your app](https://discordapp.com/developers/applications/me)
