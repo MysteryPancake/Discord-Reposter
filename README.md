@@ -1,7 +1,7 @@
 # Discord Reposter
 A simple bot I made because I wanted my friends to stop deleting their messages.
 
-Sends all the messages in one channel to another. It can be in another server if you have the right permissions.
+Reposts all the messages from one channel to another channel, which can be in another server.
 
 At the moment it goes backward from the latest message sent. When I use [lastMessageID](https://discord.js.org/#/docs/main/stable/class/TextChannel?scrollTo=lastMessageID) it'll be possible to go forward.
 
