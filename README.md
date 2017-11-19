@@ -16,3 +16,5 @@ Sadly it only reposts backward from the latest message. It's impossible to go fo
 8. On the Discord website, find the channel you want to repost from, and copy the last number of the URL
 9. Find the channel you want to repost to, and in that channel say `/repost <CHANNEL_ID>`, with `<CHANNEL_ID>` replaced with the number you copied
 10. Hope it works
+
+![Icon](repost.png?raw=true)
