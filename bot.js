@@ -5,7 +5,7 @@ console.log("LOADING LIBRARIES...");
 const Discord = require("discord.js");
 const client = new Discord.Client();
 
-client.login("<SECRET_BOT_TOKEN>");
+client.login("MzgxMzc2MDc3ODk1MDQxMDI0.DPGPxg.tSUaD1DXPQZshlXGVBOvtbiJKsA");
 
 client.on("ready", function() {
 	client.user.setGame("on " + client.guilds.size + " servers");
@@ -13,9 +13,9 @@ client.on("ready", function() {
 });
 
 function fetchMessages(message, channel) {
-	message.channel.fetchMessages({ limit: 100, after: message.id }).then(function(messages) {
+	message.channel.fetchMessages({ limit: 100, before: message.id }).then(function(messages) {
 		let lastMessage, lastAuthor;
-		for (let value of Array.from(messages.values()).reverse()) {
+		messages.forEach(function(value) {
 			const author = value.author;
 			if (author.id !== lastAuthor) {
 				channel.send("**" + author.tag + "**");
@@ -29,7 +29,7 @@ function fetchMessages(message, channel) {
 			});
 			lastMessage = value;
 			lastAuthor = author.id;
-		}
+		});
 		fetchMessages(lastMessage, channel);
 	}).catch(console.log);
 }
@@ -44,9 +44,7 @@ client.on("message", function(message) {
 			channel.send("__**" + message.guild.name + "**__");
 			channel.send("**" + message.channel.name + "**");
 			channel.send("*" + message.channel.topic + "*");
-			message.channel.fetchMessage(message.channel.lastMessageID).then(function(last) {
-				fetchMessages(last, channel);
-			}).catch(console.log);
+			fetchMessages(message, channel);
 			message.channel.send("Reposting to " + id + "!");
 		} else {
 			message.channel.send("Couldn't repost to " + id + "!");
