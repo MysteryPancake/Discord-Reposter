@@ -13,9 +13,9 @@ client.on("ready", function() {
 });
 
 function fetchMessages(message, channel) {
-	message.channel.fetchMessages({ limit: 100, before: message.id }).then(function(messages) {
+	message.channel.fetchMessages({ limit: 100, after: message.id }).then(function(messages) {
 		let lastMessage, lastAuthor;
-		messages.forEach(function(value) {
+		for (let value of Array.from(messages.values()).reverse()) {
 			const author = value.author;
 			if (author.id !== lastAuthor) {
 				channel.send("**" + author.tag + "**");
@@ -29,7 +29,7 @@ function fetchMessages(message, channel) {
 			});
 			lastMessage = value;
 			lastAuthor = author.id;
-		});
+		}
 		fetchMessages(lastMessage, channel);
 	}).catch(console.log);
 }
@@ -44,7 +44,9 @@ client.on("message", function(message) {
 			channel.send("__**" + message.guild.name + "**__");
 			channel.send("**" + message.channel.name + "**");
 			channel.send("*" + message.channel.topic + "*");
-			fetchMessages(message, channel);
+			message.channel.fetchMessage(message.channel.lastMessageID).then(function(last) {
+				fetchMessages(last, channel);
+			}).catch(console.log);
 			message.channel.send("Reposting to " + id + "!");
 		} else {
 			message.channel.send("Couldn't repost to " + id + "!");
