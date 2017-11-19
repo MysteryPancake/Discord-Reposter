@@ -13,7 +13,7 @@ client.on("ready", function() {
 });
 
 function fetchMessages(message, channel) {
-	message.channel.fetchMessages({limit: 100, before: message.id}).then(function(messages) {
+	message.channel.fetchMessages({ limit: 100, before: message.id }).then(function(messages) {
 		let lastMessage, lastAuthor;
 		messages.forEach(function(value) {
 			const author = value.author;
@@ -36,8 +36,8 @@ function fetchMessages(message, channel) {
 
 client.on("message", function(message) {
 	if (message.author.bot) return;
-	if (message.content.startsWith("repost")) {
-		const id = message.content.substr(7);
+	if (message.content.startsWith("/repost")) {
+		const id = message.content.substr(8);
 		const channel = client.channels.get(id);
 		if (channel) {
 			channel.send(message.guild.iconURL);
