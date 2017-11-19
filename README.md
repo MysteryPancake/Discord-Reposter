@@ -3,7 +3,7 @@ A simple bot I made because I wanted my friends to stop deleting their messages.
 
 It reposts all the messages from one channel to another channel, which can even be in another server.
 
-It reposts backward from the newest message. It's impossible to go forward from the oldest message because [discord.js](https://github.com/hydrabolt/discord.js) won't let me.
+It reposts backward from the newest message. Currently it's impossible to go forward from the oldest message because [discord.js](https://github.com/hydrabolt/discord.js) doesn't have a method to get the oldest message in a channel.
 
 ## Usage
 1. [Create your app](https://discordapp.com/developers/applications/me)
