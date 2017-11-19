@@ -12,9 +12,10 @@ client.on("ready", function() {
 	console.log("READY FOR ACTION!");
 });
 
+let lastMessage, lastAuthor;
+
 function fetchMessages(message, channel) {
 	message.channel.fetchMessages({ limit: 100, before: message.id }).then(function(messages) {
-		let lastMessage, lastAuthor;
 		messages.forEach(function(value) {
 			const author = value.author;
 			if (author.id !== lastAuthor) {
@@ -40,12 +41,12 @@ client.on("message", function(message) {
 		const id = message.content.substr(8);
 		const channel = client.channels.get(id);
 		if (channel) {
+			message.channel.send("Reposting to " + id + "!");
 			channel.send(message.guild.iconURL);
 			channel.send("__**" + message.guild.name + "**__");
 			channel.send("**" + message.channel.name + "**");
 			channel.send("*" + message.channel.topic + "*");
 			fetchMessages(message, channel);
-			message.channel.send("Reposting to " + id + "!");
 		} else {
 			message.channel.send("Couldn't repost to " + id + "!");
 		}
