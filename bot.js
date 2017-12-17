@@ -23,10 +23,18 @@ function fetchMessages(message, channel) {
 			}
 			const content = value.content;
 			if (content) {
-				channel.send(content);
+				channel.send(content).then(function(sent) {
+					value.reactions.forEach(function(reaction) {
+						sent.react(reaction.emoji);
+					});
+				});
 			}
 			value.attachments.forEach(function(file) {
-				channel.send(file.url);
+				channel.send(file.url).then(function(sent) {
+					value.reactions.forEach(function(reaction) {
+						sent.react(reaction.emoji);
+					});
+				});
 			});
 			lastMessage = value;
 			lastAuthor = author.id;
