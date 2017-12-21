@@ -8,7 +8,7 @@ const client = new Discord.Client();
 client.login("<SECRET_BOT_TOKEN>");
 
 client.on("ready", function() {
-	client.user.setGame("on " + client.guilds.size + " servers");
+	client.user.setGame("on " + client.guilds.size + " servers").catch(console.log);
 	console.log("READY FOR ACTION!");
 });
 
