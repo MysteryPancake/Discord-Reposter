@@ -55,7 +55,7 @@ client.on("message", function(message) {
 			message.channel.members.forEach(function(member) {
 				if (!member.user.bot) {
 					const username = member.user.username;
-					promises.push(channel.createWebhook(username, member.user.avatarURL).then(function(hook) {
+					promises.push(channel.createWebhook(username, member.user.displayAvatarURL).then(function(hook) {
 						webhooks[username] = hook;
 					}).catch(console.log));
 				}
