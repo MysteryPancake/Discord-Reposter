@@ -53,7 +53,7 @@ client.on("message", function(message) {
 			channel.send(message.guild.iconURL);
 			channel.send("__**" + message.guild.name + "**__");
 			channel.send("**" + message.channel.name + "**");
-			channel.send("*" + message.channel.topic + "*");
+			channel.send("*" + (message.channel.topic || "No topic") + "*");
 			fetchMessages(message, channel);
 		} else {
 			message.channel.send("Couldn't repost to " + id + "!");
