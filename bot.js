@@ -19,22 +19,22 @@ function fetchMessages(message, channel) {
 		messages.forEach(function(value) {
 			const author = value.author;
 			if (author.id !== lastAuthor) {
-				channel.send("**" + author.tag + "**");
+				channel.send("**" + author.tag + "**").catch(console.log);
 			}
 			const content = value.content;
 			if (content) {
 				channel.send(content).then(function(sent) {
 					value.reactions.forEach(function(reaction) {
-						sent.react(reaction.emoji);
+						sent.react(reaction.emoji).catch(console.log);
 					});
-				});
+				}).catch(console.log);
 			}
 			value.attachments.forEach(function(file) {
 				channel.send(file.url).then(function(sent) {
 					value.reactions.forEach(function(reaction) {
-						sent.react(reaction.emoji);
+						sent.react(reaction.emoji).catch(console.log);
 					});
-				});
+				}).catch(console.log);
 			});
 			lastMessage = value;
 			lastAuthor = author.id;
@@ -49,14 +49,14 @@ client.on("message", function(message) {
 		const id = message.content.substr(8);
 		const channel = client.channels.get(id);
 		if (channel) {
-			message.channel.send("Reposting to " + id + "!");
-			channel.send(message.guild.iconURL);
-			channel.send("__**" + message.guild.name + "**__");
-			channel.send("**" + message.channel.name + "**");
-			channel.send("*" + (message.channel.topic || "No topic") + "*");
+			message.channel.send("Reposting to " + id + "!").catch(console.log);
+			channel.send(message.guild.iconURL).catch(console.log);
+			channel.send("__**" + message.guild.name + "**__").catch(console.log);
+			channel.send("**" + message.channel.name + "**").catch(console.log);
+			channel.send("*" + (message.channel.topic || "No topic") + "*").catch(console.log);
 			fetchMessages(message, channel);
 		} else {
-			message.channel.send("Couldn't repost to " + id + "!");
+			message.channel.send("Couldn't repost to " + id + "!").catch(console.log);
 		}
 	}
 });
