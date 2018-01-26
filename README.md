@@ -15,7 +15,7 @@ It reposts backward from the newest message. Currently it's impossible to go for
 5. [Install node.js](https://nodejs.org/en/download)
 6. [Install discord.js](https://github.com/hydrabolt/discord.js): `npm install discord.js`
 7. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/bot.js): `node bot.js`
-8. [On the Discord website](https://discordapp.com/channels/@me), find the channel you want to repost from, and copy the last number on the URL
+8. [On Discord](https://discordapp.com/channels/@me), find the channel you want to repost from, and copy the last number of the URL
 9. Find the channel you want to repost to, and in that channel say `/repost <CHANNEL_ID>`, with `<CHANNEL_ID>` as the number you copied
 10. Hope it works
 
