@@ -13,7 +13,7 @@ client.on("ready", function() {
 });
 
 let lastMessage;
-let webhooks = {};
+const webhooks = {};
 
 function fetchMessages(message, channel) {
 	message.channel.fetchMessages({ limit: 100, before: message.id }).then(function(messages) {
@@ -51,7 +51,7 @@ client.on("message", function(message) {
 			channel.send("__**" + message.guild.name + "**__").catch(console.log);
 			channel.send("**" + message.channel.name + "**").catch(console.log);
 			channel.send("*" + (message.channel.topic || "No topic") + "*").catch(console.log);
-			let promises = [];
+			const promises = [];
 			message.channel.members.forEach(function(member) {
 				if (!member.user.bot) {
 					const username = member.user.username;
