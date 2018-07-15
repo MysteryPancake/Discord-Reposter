@@ -123,7 +123,6 @@ async function sendInfo(from, to) {
 	rich.addField("Server ID", from.guild.id, true);
 	rich.addField("Server Owner", from.guild.owner.user.tag, true);
 	rich.addField("Server Region", from.guild.region, true);
-	rich.addField("Server Channels", from.guild.channels.size, true);
 	const channels = {};
 	for (const channel of from.guild.channels.values()) {
 		channels[channel.type] = (channels[channel.type] || 0) + 1;
@@ -131,7 +130,14 @@ async function sendInfo(from, to) {
 	for (let channel in channels) {
 		rich.addField(capitalizeFirst(channel) + " Channels", channels[channel], true);
 	}
-	rich.addField("Server Members", from.guild.memberCount, true);
+	let bots = 0;
+	for (const member of from.guild.members.values()) {
+		if (member.user.bot) {
+			bots++;
+		}
+	}
+	rich.addField("Server Humans", from.guild.members.size - bots, true);
+	rich.addField("Server Bots", bots, true);
 	rich.addField("Server Roles", from.guild.roles.size, true);
 	rich.addField("Server Emojis", from.guild.emojis.size, true);
 	rich.addField("Server Verification", from.guild.verificationLevel, true);
