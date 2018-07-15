@@ -12,72 +12,46 @@ client.on("ready", function() {
 	console.log("READY FOR ACTION!");
 });
 
-async function reactLoop(iterator, sent, resolve) {
-	const iter = iterator.next();
-	if (iter.done) {
-		resolve();
-	} else {
-		const emoji = iter.value.emoji;
-		if (client.emojis.get(emoji.id)) {
-			await sent.react(emoji).catch(console.log);
+async function send(content, channel, reactions) {
+	const sent = await channel.send(content).catch(console.log);
+	if (reactions.size) {
+		for (const reaction of reactions.values()) {
+			const emoji = reaction.emoji;
+			if (client.emojis.has(emoji.id) || emoji.id === null) {
+				await sent.react(emoji).catch(console.log);
+			}
 		}
-		reactLoop(iterator, sent, resolve);
 	}
 }
 
-function send(content, channel, reactions) {
-	return new Promise(async function(resolve) {
-		const sent = await channel.send(content).catch(console.log);
-		reactLoop(reactions.values(), sent, resolve);
-	});
-}
-
-async function embedLoop(index, message, channel, resolve) {
-	const embed = message.embeds[index];
-	if (embed) {
-		if (embed.type === "rich") {
-			const rich = new Discord.RichEmbed();
-			if (embed.author) {
-				rich.setAuthor(embed.author.name, embed.author.iconURL, embed.author.url);
-			}
-			rich.setColor(embed.color);
-			if (embed.description) {
-				rich.setDescription(embed.description);
-			}
-			for (let i = 0; i < embed.fields.length; i++) {
-				const field = embed.fields[i];
-				rich.addField(field.name, field.value, field.inline);
-			}
-			if (embed.footer) {
-				rich.setFooter(embed.footer.text, embed.footer.iconURL);
-			}
-			if (embed.image) {
-				rich.setImage(embed.image.url);
-			}
-			if (embed.thumbnail) {
-				rich.setThumbnail(embed.thumbnail.url);
-			}
-			rich.setTimestamp(embed.timestamp);
-			if (embed.title) {
-				rich.setTitle(embed.title);
-			}
-			rich.setURL(embed.url);
-			await send(rich, channel, message.reactions);
-		}
-		embedLoop(index + 1, message, channel, resolve);
-	} else {
-		resolve({ message: message, author: message.author.id });
+function richEmbed(embed) {
+	const rich = new Discord.RichEmbed();
+	if (embed.author) {
+		rich.setAuthor(embed.author.name, embed.author.iconURL, embed.author.url);
 	}
-}
-
-async function fileLoop(iterator, message, channel, resolve) {
-	const iter = iterator.next();
-	if (iter.done) {
-		resolve();
-	} else {
-		await send(iter.value.filesize > 8000000 ? iter.value.url : { files: [iter.value.url] }, channel, message.reactions);
-		fileLoop(iterator, message, channel, resolve);
+	rich.setColor(embed.color);
+	if (embed.description) {
+		rich.setDescription(embed.description);
 	}
+	for (let i = 0; i < embed.fields.length; i++) {
+		const field = embed.fields[i];
+		rich.addField(field.name, field.value, field.inline);
+	}
+	if (embed.footer) {
+		rich.setFooter(embed.footer.text, embed.footer.iconURL);
+	}
+	if (embed.image) {
+		rich.setImage(embed.image.url);
+	}
+	if (embed.thumbnail) {
+		rich.setThumbnail(embed.thumbnail.url);
+	}
+	rich.setTimestamp(embed.timestamp);
+	if (embed.title) {
+		rich.setTitle(embed.title);
+	}
+	rich.setURL(embed.url);
+	return rich;
 }
 
 async function sendMessage(message, channel, lastAuthor) {
@@ -89,28 +63,30 @@ async function sendMessage(message, channel, lastAuthor) {
 	if (content) {
 		await send(content, channel, message.reactions);
 	}
-	await new Promise(function(finished) {
-		fileLoop(message.attachments.values(), message, channel, finished);
-	});
-	return new Promise(function(finished) {
-		embedLoop(0, message, channel, finished);
-	});
-}
-
-async function sendLoop(iterator, channel, resolve, lastAuthor, lastMessage) {
-	const iter = iterator.next();
-	if (iter.done) {
-		resolve(lastMessage);
-	} else {
-		const last = await sendMessage(iter.value, channel, lastAuthor);
-		sendLoop(iterator, channel, resolve, last.author, last.message);
+	if (message.attachments.size) {
+		for (const attachment of message.attachments.values()) {
+			await send(attachment.filesize > 8000000 ? attachment.url : { files: [attachment.url] }, channel, message.reactions);
+		}
 	}
+	if (message.embeds.length) {
+		for (let i = 0; i < message.embeds.length; i++) {
+			const embed = message.embeds[i];
+			if (embed.type === "rich") {
+				await send(richEmbed(embed), channel, message.reactions);
+			}
+		}
+	}
+	return { message: message, author: message.author.id };
 }
 
-function sendMessages(messages, channel, lastAuthor) {
-	return new Promise(function(resolve) {
-		sendLoop(messages.values(), channel, resolve, lastAuthor);
-	});
+async function sendMessages(messages, channel, lastAuthor) {
+	let last;
+	if (messages.size) {
+		for (const message of messages.values()) {
+			last = await sendMessage(message, channel, last ? last.author : lastAuthor);
+		}
+	}
+	return last && last.message;
 }
 
 async function fetchMessages(message, channel) {
@@ -124,15 +100,54 @@ async function fetchMessages(message, channel) {
 	}
 }
 
+function capitalizeFirst(str) {
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 async function sendInfo(from, to) {
-	await to.send(from.guild.iconURL).catch(console.log);
-	await to.send("__**" + from.guild.name + "**__").catch(console.log);
-	await to.send("**" + from.channel.name + "**").catch(console.log);
-	await to.send("*" + (from.channel.topic || "No topic") + "*").catch(console.log);
-	await to.send("__Pins__").catch(console.log);
+	const rich = new Discord.RichEmbed();
+	rich.setAuthor(from.guild.name, from.guild.iconURL);
+	rich.setDescription(from.channel.topic || "No topic");
+	rich.setFooter("Reposting from " + from.channel.id, client.user.displayAvatarURL);
+	rich.setThumbnail(from.guild.iconURL);
+	rich.setTimestamp();
+	rich.setTitle(from.channel.name);
+	if (from.channel.parent) {
+		rich.addField("Channel Category", from.channel.parent.name, true);
+	}
+	rich.addField("NSFW Channel", from.channel.nsfw, true);
+	rich.addField("Channel ID", from.channel.id, true);
+	rich.addField("Channel Type", from.channel.type, true);
+	rich.addField("Channel Creation Date", from.channel.createdAt, true);
+	rich.addField("Channel Creation Time", from.channel.createdTimestamp, true);
+	rich.addField("Server ID", from.guild.id, true);
+	rich.addField("Server Owner", from.guild.owner.user.tag, true);
+	rich.addField("Server Region", from.guild.region, true);
+	rich.addField("Server Channels", from.guild.channels.size, true);
+	const channels = {};
+	for (const channel of from.guild.channels.values()) {
+		channels[channel.type] = (channels[channel.type] || 0) + 1;
+	}
+	for (let channel in channels) {
+		rich.addField(capitalizeFirst(channel) + " Channels", channels[channel], true);
+	}
+	rich.addField("Server Members", from.guild.memberCount, true);
+	rich.addField("Server Roles", from.guild.roles.size, true);
+	rich.addField("Server Emojis", from.guild.emojis.size, true);
+	rich.addField("Server Verification", from.guild.verificationLevel, true);
+	rich.addField("Default Role", from.guild.defaultRole.name, true);
+	rich.addField("Default Role ID", from.guild.defaultRole.id, true);
+	if (from.guild.systemChannel) {
+		rich.addField("Default Channel", from.guild.systemChannel.name, true);
+		rich.addField("Default Channel ID", from.guild.systemChannelID, true);
+	}
+	rich.addField("Server Creation Date", from.guild.createdAt, true);
+	rich.addField("Server Creation Time", from.guild.createdTimestamp, true);
+	await to.send(rich).catch(console.log);
+	await to.send("__**Pins**__").catch(console.log);
 	const pins = await from.channel.fetchPinnedMessages().catch(console.log);
 	await sendMessages(pins, to);
-	await to.send("__Messages__").catch(console.log);
+	await to.send("__**Messages**__").catch(console.log);
 	fetchMessages(from, to);
 }
 
