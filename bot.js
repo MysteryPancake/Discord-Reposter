@@ -12,172 +12,142 @@ client.on("ready", function() {
 	console.log("READY FOR ACTION!");
 });
 
-let lastMessage, lastAuthor;
-
-function reactLoop(values, sent, func) {
-	const iter = values.next();
+async function reactLoop(iterator, sent, resolve) {
+	const iter = iterator.next();
 	if (iter.done) {
-		func();
+		resolve();
 	} else {
 		const emoji = iter.value.emoji;
 		if (client.emojis.get(emoji.id)) {
-			sent.react(emoji).then(function() {
-				reactLoop(values, sent, func);
-			}).catch(console.log);
-		} else {
-			reactLoop(values, sent, func);
+			await sent.react(emoji).catch(console.log);
 		}
+		reactLoop(iterator, sent, resolve);
 	}
 }
 
-function send(channel, content, reactions, func) {
-	channel.send(content).then(function(sent) {
-		reactLoop(reactions.values(), sent, func);
-	}).catch(console.log);
+function send(content, channel, reactions) {
+	return new Promise(async function(resolve) {
+		const sent = await channel.send(content).catch(console.log);
+		reactLoop(reactions.values(), sent, resolve);
+	});
 }
 
-function complete(iterator, message, channel, func) {
-	lastMessage = message;
-	lastAuthor = message.author.id;
-	sendMessages(iterator, channel, func);
-}
-
-function embedLoop(embeds, index, iterator, message, channel, func) {
-	const embed = embeds[index];
+async function embedLoop(index, message, channel, resolve) {
+	const embed = message.embeds[index];
 	if (embed) {
-		const rich = new Discord.RichEmbed();
-		if (embed.author) {
-			rich.setAuthor(embed.author.name, embed.author.iconURL, embed.author.url);
+		if (embed.type === "rich") {
+			const rich = new Discord.RichEmbed();
+			if (embed.author) {
+				rich.setAuthor(embed.author.name, embed.author.iconURL, embed.author.url);
+			}
+			rich.setColor(embed.color);
+			if (embed.description) {
+				rich.setDescription(embed.description);
+			}
+			for (let i = 0; i < embed.fields.length; i++) {
+				const field = embed.fields[i];
+				rich.addField(field.name, field.value, field.inline);
+			}
+			if (embed.footer) {
+				rich.setFooter(embed.footer.text, embed.footer.iconURL);
+			}
+			if (embed.image) {
+				rich.setImage(embed.image.url);
+			}
+			if (embed.thumbnail) {
+				rich.setThumbnail(embed.thumbnail.url);
+			}
+			rich.setTimestamp(embed.timestamp);
+			if (embed.title) {
+				rich.setTitle(embed.title);
+			}
+			rich.setURL(embed.url);
+			await send(rich, channel, message.reactions);
 		}
-		rich.setColor(embed.color);
-		if (embed.description) {
-			rich.setDescription(embed.description);
-		}
-		for (let i = 0; i < embed.fields.length; i++) {
-			const field = embed.fields[i];
-			rich.addField(field.name, field.value, field.inline);
-		}
-		if (embed.footer) {
-			rich.setFooter(embed.footer.text, embed.footer.icon);
-		}
-		if (embed.image) {
-			rich.setImage(embed.image.url);
-		}
-		if (embed.thumbnail) {
-			rich.setThumbnail(embed.thumbnail.url);
-		}
-		rich.setTimestamp(embed.timestamp);
-		if (embed.title) {
-			rich.setTitle(embed.title);
-		}
-		rich.setURL(embed.url);
-		send(channel, rich, message.reactions, function() {
-			embedLoop(embeds, index + 1, iterator, message, channel, func);
-		});
+		embedLoop(index + 1, message, channel, resolve);
 	} else {
-		complete(iterator, message, channel, func);
+		resolve({ message: message, author: message.author.id });
 	}
 }
 
-function finalize(iterator, message, channel, func) {
-	if (message.embeds.length) {
-		embedLoop(message.embeds, 0, iterator, message, channel, func);
-	} else {
-		complete(iterator, message, channel, func);
-	}
-}
-
-function fileLoop(values, iterator, message, channel, func) {
-	const iter = values.next();
-	if (iter.done) {
-		finalize(iterator, message, channel, func);
-	} else {
-		send(channel, iter.value.filesize > 8000000 ? iter.value.url : { files: [iter.value.url] }, message.reactions, function() {
-			fileLoop(values, iterator, message, channel, func);
-		});
-	}
-}
-
-function attachmentLoop(iterator, message, channel, func) {
-	if (message.attachments.size) {
-		fileLoop(message.attachments.values(), iterator, message, channel, func);
-	} else {
-		finalize(iterator, message, channel, func);
-	}
-}
-
-function contentLoop(iterator, message, channel, func) {
-	const content = message.content;
-	if (content) {
-		send(channel, content, message.reactions, function() {
-			attachmentLoop(iterator, message, channel, func);
-		});
-	} else {
-		attachmentLoop(iterator, message, channel, func);
-	}
-}
-
-function sendMessages(iterator, channel, func) {
+async function fileLoop(iterator, message, channel, resolve) {
 	const iter = iterator.next();
 	if (iter.done) {
-		func();
+		resolve();
 	} else {
-		const message = iter.value;
-		const author = message.author;
-		if (author.id !== lastAuthor) {
-			channel.send("**" + author.tag + "**").then(function() {
-				contentLoop(iterator, message, channel, func);
-			}).catch(console.log);
-		} else {
-			contentLoop(iterator, message, channel, func);
-		}
+		await send(iter.value.filesize > 8000000 ? iter.value.url : { files: [iter.value.url] }, channel, message.reactions);
+		fileLoop(iterator, message, channel, resolve);
 	}
 }
 
-function fetchMessages(message, channel) {
-	message.channel.fetchMessages({ limit: 100, before: message.id }).then(function(messages) {
-		if (messages.size) {
-			sendMessages(messages.values(), channel, function() {
-				fetchMessages(lastMessage, channel);
-			});
-		}
-	}).catch(console.log);
+async function sendMessage(message, channel, lastAuthor) {
+	const author = message.author;
+	if (author.id !== lastAuthor) {
+		await channel.send("**" + author.tag + "**").catch(console.log);
+	}
+	const content = message.content;
+	if (content) {
+		await send(content, channel, message.reactions);
+	}
+	await new Promise(function(finished) {
+		fileLoop(message.attachments.values(), message, channel, finished);
+	});
+	return new Promise(function(finished) {
+		embedLoop(0, message, channel, finished);
+	});
 }
 
-function sendInfo(from, to) {
-	to.send(from.guild.iconURL).then(function() {
-		to.send("__**" + from.guild.name + "**__");
-	}).then(function() {
-		to.send("**" + from.channel.name + "**");
-	}).then(function() {
-		to.send("*" + (from.channel.topic || "No topic") + "*");
-	}).then(function() {
-		to.send("__Pins__");
-	}).then(function() {
-		from.channel.fetchPinnedMessages().then(function(messages) {
-			sendMessages(messages.values(), to, function() {
-				to.send("__Messages__").then(function() {
-					fetchMessages(from, to);
-				}).catch(console.log);
-			});
-		}).catch(console.log);
-	}).catch(console.log);
+async function sendLoop(iterator, channel, resolve, lastAuthor, lastMessage) {
+	const iter = iterator.next();
+	if (iter.done) {
+		resolve(lastMessage);
+	} else {
+		const last = await sendMessage(iter.value, channel, lastAuthor);
+		sendLoop(iterator, channel, resolve, last.author, last.message);
+	}
 }
 
-function repost(id, message, direction) {
+function sendMessages(messages, channel, lastAuthor) {
+	return new Promise(function(resolve) {
+		sendLoop(messages.values(), channel, resolve, lastAuthor);
+	});
+}
+
+async function fetchMessages(message, channel) {
+	const last = await sendMessage(message, channel);
+	const messages = await message.channel.fetchMessages({ limit: 100, before: message.id }).catch(console.log);
+	if (messages.size) {
+		const lastMessage = await sendMessages(messages, channel, last.author);
+		fetchMessages(lastMessage, channel);
+	} else {
+		channel.send("**Repost Complete!**").catch(console.log);
+	}
+}
+
+async function sendInfo(from, to) {
+	await to.send(from.guild.iconURL).catch(console.log);
+	await to.send("__**" + from.guild.name + "**__").catch(console.log);
+	await to.send("**" + from.channel.name + "**").catch(console.log);
+	await to.send("*" + (from.channel.topic || "No topic") + "*").catch(console.log);
+	await to.send("__Pins__").catch(console.log);
+	const pins = await from.channel.fetchPinnedMessages().catch(console.log);
+	await sendMessages(pins, to);
+	await to.send("__Messages__").catch(console.log);
+	fetchMessages(from, to);
+}
+
+async function repost(id, message, direction) {
 	const channel = client.channels.get(id);
 	if (channel) {
-		message.channel.send("Reposting " + (direction ? "from" : "to") + " " + id + "!").then(function() {
-			if (direction) {
-				channel.fetchMessages({ limit: 1 }).then(function(messages) {
-					sendInfo(messages.first(), message.channel);
-				}).catch(console.log);
-			} else {
-				sendInfo(message, channel);
-			}
-		}).catch(console.log);
+		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.log);
+		if (direction) {
+			const messages = await channel.fetchMessages({ limit: 1 }).catch(console.log);
+			sendInfo(messages.first(), message.channel);
+		} else {
+			sendInfo(message, channel);
+		}
 	} else {
-		message.channel.send("Couldn't repost " + (direction ? "from" : "to") + " " + id + "!").catch(console.log);
+		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!**").catch(console.log);
 	}
 }
 

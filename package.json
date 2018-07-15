@@ -6,10 +6,27 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["discord", "discord-bot", "discord-js", "discord-api", "discordjs", "discordjs-bot", "javascript", "discordjsbot", "discordapp", "discordbot", "nodejs", "node-js", "bot"],
+  "keywords": [
+    "discord",
+    "discord-bot",
+    "discord-js",
+    "discord-api",
+    "discordjs",
+    "discordjs-bot",
+    "javascript",
+    "discordjsbot",
+    "discordapp",
+    "discordbot",
+    "nodejs",
+    "node-js",
+    "bot"
+  ],
   "author": "MysteryPancake",
   "license": "MIT",
   "dependencies": {
-    "discord.js": "^11.2.1"
+    "discord.js": "^11.3.2"
+  },
+  "devDependencies": {
+    "babel-eslint": "^8.2.6"
   }
 }
