@@ -54,10 +54,21 @@ function richEmbed(embed) {
 	return rich;
 }
 
+const systemMessages = {
+	DEFAULT: "",
+	RECIPIENT_ADD: " added someone to the group.",
+	RECIPIENT_REMOVE: " removed someone from the group.",
+	CALL: " started a call.",
+	CHANNEL_NAME_CHANGE: " changed the name of this channel.",
+	CHANNEL_ICON_CHANGE: " changed the icon of this channel.",
+	PINS_ADD: " pinned a message to this channel.",
+	GUILD_MEMBER_JOIN: " just joined."
+};
+
 async function sendMessage(message, channel, lastAuthor) {
 	const author = message.author;
-	if (author.id !== lastAuthor) {
-		await channel.send("**" + author.tag + "**").catch(console.log);
+	if (author.id !== lastAuthor || message.type !== "DEFAULT") {
+		await channel.send("**" + author.tag + systemMessages[message.type] + "**").catch(console.log);
 	}
 	const content = message.content;
 	if (content) {
