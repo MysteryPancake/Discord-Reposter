@@ -3,8 +3,13 @@
   "version": "1.0.0",
   "description": "Bot for reposting Discord messages.",
   "main": "bot.js",
+  "engines": {
+  	"node": "10.x",
+  	"npm": "*"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node bot.js"
   },
   "keywords": [
     "discord",
@@ -19,7 +24,11 @@
     "discordbot",
     "nodejs",
     "node-js",
-    "bot"
+    "bot",
+    "archive",
+    "repost",
+    "reposter",
+    "reposts"
   ],
   "author": "MysteryPancake",
   "license": "MIT",
