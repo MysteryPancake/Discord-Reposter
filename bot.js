@@ -8,17 +8,17 @@ const client = new Discord.Client();
 client.login("<SECRET_BOT_TOKEN>");
 
 client.on("ready", function() {
-	client.user.setActivity("on " + client.guilds.size + " servers").catch(console.log);
+	client.user.setActivity("on " + client.guilds.size + " servers").catch(console.error);
 	console.log("READY FOR ACTION!");
 });
 
 async function send(content, channel, reactions) {
-	const sent = await channel.send(content).catch(console.log);
+	const sent = await channel.send(content).catch(console.error);
 	if (reactions.size) {
 		for (const reaction of reactions.values()) {
 			const emoji = reaction.emoji;
 			if (client.emojis.has(emoji.id) || emoji.id === null) {
-				await sent.react(emoji).catch(console.log);
+				await sent.react(emoji).catch(console.error);
 			}
 		}
 	}
@@ -68,7 +68,7 @@ const systemMessages = {
 async function sendMessage(message, channel, lastAuthor) {
 	const author = message.author;
 	if (author.id !== lastAuthor || message.type !== "DEFAULT") {
-		await channel.send("**" + author.tag + systemMessages[message.type] + "**").catch(console.log);
+		await channel.send("**" + author.tag + systemMessages[message.type] + "**").catch(console.error);
 	}
 	const content = message.content;
 	if (content) {
@@ -102,12 +102,12 @@ async function sendMessages(messages, channel, lastAuthor) {
 
 async function fetchMessages(message, channel) {
 	const last = await sendMessage(message, channel);
-	const messages = await message.channel.fetchMessages({ limit: 100, before: message.id }).catch(console.log);
+	const messages = await message.channel.fetchMessages({ limit: 100, before: message.id }).catch(console.error);
 	if (messages.size) {
 		const lastMessage = await sendMessages(messages, channel, last.author);
 		fetchMessages(lastMessage, channel);
 	} else {
-		channel.send("**Repost Complete!**").catch(console.log);
+		channel.send("**Repost Complete!**").catch(console.error);
 	}
 }
 
@@ -160,26 +160,26 @@ async function sendInfo(from, to) {
 	}
 	rich.addField("Server Creation Date", from.guild.createdAt, true);
 	rich.addField("Server Creation Time", from.guild.createdTimestamp, true);
-	await to.send(rich).catch(console.log);
-	await to.send("__**Pins**__").catch(console.log);
-	const pins = await from.channel.fetchPinnedMessages().catch(console.log);
+	await to.send(rich).catch(console.error);
+	await to.send("__**Pins**__").catch(console.error);
+	const pins = await from.channel.fetchPinnedMessages().catch(console.error);
 	await sendMessages(pins, to);
-	await to.send("__**Messages**__").catch(console.log);
+	await to.send("__**Messages**__").catch(console.error);
 	fetchMessages(from, to);
 }
 
 async function repost(id, message, direction) {
 	const channel = client.channels.get(id);
 	if (channel) {
-		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.log);
+		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
 		if (direction) {
-			const messages = await channel.fetchMessages({ limit: 1 }).catch(console.log);
+			const messages = await channel.fetchMessages({ limit: 1 }).catch(console.error);
 			sendInfo(messages.first(), message.channel);
 		} else {
 			sendInfo(message, channel);
 		}
 	} else {
-		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!**").catch(console.log);
+		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
 	}
 }
 
