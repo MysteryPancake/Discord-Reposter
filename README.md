@@ -13,7 +13,7 @@ It reposts backward from the newest message. Currently it's impossible to go for
 ### Repost To
 *Reposts to a channel.*
 
-`/repost <CHANNEL_ID>` or `/repost to <CHANNEL_ID>`
+`/repost to <CHANNEL_ID>` or `/repost <CHANNEL_ID>`
 
 ### Repost From
 *Reposts from a channel.*
