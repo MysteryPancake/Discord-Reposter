@@ -9,7 +9,28 @@ You can even use webhooks to repost messages if you run [coolbot.js](https://git
 
 It reposts backward from the newest message. Currently it's impossible to go forward from the oldest message because [discord.js](https://github.com/hydrabolt/discord.js) doesn't have a method to get the oldest message in a channel.
 
-## Usage
+## Commands
+### Repost To
+*Reposts to a channel.*
+
+`/repost <CHANNEL_ID>` or `/repost to <CHANNEL_ID>`
+
+### Repost From
+*Reposts from a channel.*
+
+`/repost from <CHANNEL_ID>`
+
+### Repost Channels
+*Posts the channels the bot is in.*
+
+`/repost channels`
+
+### Repost Commands
+*Posts a command list.*
+
+`/repost commands` or `/repost help`
+
+## Setup
 1. [Create your app](https://discordapp.com/developers/applications/me)
 2. Click `Create a Bot User`
 3. Copy your bot's secret token and [paste it on this line](https://github.com/MysteryPancake/Discord-Reposter/blob/master/bot.js#L8)
