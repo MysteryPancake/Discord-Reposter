@@ -170,7 +170,7 @@ async function sendInfo(from, to) {
 
 async function repost(id, message, direction) {
 	const channel = client.channels.get(id);
-	if (channel && channel.type === "text" || channel.type === "group" || channel.type === "dm") {
+	if (channel && (channel.type === "text" || channel.type === "group" || channel.type === "dm")) {
 		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
 		if (direction) {
 			const messages = await channel.fetchMessages({ limit: 1 }).catch(console.error);
