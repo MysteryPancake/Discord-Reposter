@@ -117,12 +117,12 @@ function capitalizeFirst(str) {
 
 async function sendInfo(from, to) {
 	const rich = new Discord.RichEmbed();
-	rich.setAuthor(from.guild.name, from.guild.iconURL);
+	rich.setTitle(from.channel.name);
 	rich.setDescription(from.channel.topic || "No topic");
+	rich.setAuthor(from.guild.name, from.guild.iconURL);
 	rich.setFooter("Reposting from " + from.channel.id, client.user.displayAvatarURL);
 	rich.setThumbnail(from.guild.iconURL);
 	rich.setTimestamp();
-	rich.setTitle(from.channel.name);
 	if (from.channel.parent) {
 		rich.addField("Channel Category", from.channel.parent.name, true);
 	}
@@ -170,7 +170,7 @@ async function sendInfo(from, to) {
 
 async function repost(id, message, direction) {
 	const channel = client.channels.get(id);
-	if (channel) {
+	if (channel && channel.type === "text" || channel.type === "group" || channel.type === "dm") {
 		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
 		if (direction) {
 			const messages = await channel.fetchMessages({ limit: 1 }).catch(console.error);
@@ -179,7 +179,38 @@ async function repost(id, message, direction) {
 			sendInfo(message, channel);
 		}
 	} else {
-		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
+		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!** Try using `/repost channels`.").catch(console.error);
+	}
+}
+
+function sendCommands(to) {
+	const rich = new Discord.RichEmbed();
+	rich.setTitle("Reposter Commands");
+	rich.setDescription("By MysteryPancake");
+	rich.setAuthor(client.user.username, client.user.displayAvatarURL);
+	rich.setFooter(client.user.id, client.user.displayAvatarURL);
+	rich.setThumbnail(client.user.displayAvatarURL);
+	rich.setTimestamp();
+	rich.setURL("https://github.com/MysteryPancake/Discord-Reposter#commands");
+	rich.addField("Repost To", "*Reposts to a channel.*```/repost to <CHANNEL_ID>\n/repost <CHANNEL_ID>```", false);
+	rich.addField("Repost From", "*Reposts from a channel.*```/repost from <CHANNEL_ID>```", false);
+	rich.addField("Repost Channels", "*Posts the channels the bot is in.*```/repost channels```", false);
+	rich.addField("Repost Commands", "*Posts a command list.*```/repost commands\n/repost help```", false);
+	rich.addField("Channel ID", "```" + to.id + "```", false);
+	to.send(rich).catch(console.error);
+}
+
+async function sendChannels(message) {
+	await message.channel.send("**Sending " + client.channels.size + " channels to your direct messages!**").catch(console.error);
+	const dm = await message.author.createDM().catch(console.error);
+	await dm.send("__**Channel List**__").catch(console.error);
+	for (const channel of client.channels.values()) {
+		const rich = new Discord.RichEmbed();
+		rich.setAuthor(channel.name, channel.guild.iconURL);
+		rich.setFooter(capitalizeFirst(channel.type) + " Channel", client.user.displayAvatarURL);
+		rich.setTimestamp();
+		rich.addField("Channel ID", "`" + channel.id + "`", false);
+		await dm.send(rich).catch(console.error);
 	}
 }
 
@@ -187,11 +218,17 @@ client.on("message", function(message) {
 	if (message.author.bot) return;
 	const args = message.content.split(" ");
 	if (args[0] === "/repost") {
-		const last = args[2];
-		if (last) {
-			repost(last, message, args[1] === "from");
+		if (args[1] === "help" || args[1] === "commands") {
+			sendCommands(message.channel);
+		} else if (args[1] === "channels") {
+			sendChannels(message);
 		} else {
-			repost(args[1], message, false);
+			const last = args[2];
+			if (last) {
+				repost(last, message, args[1] === "from");
+			} else {
+				repost(args[1], message, false);
+			}
 		}
 	}
 });
