@@ -7,8 +7,6 @@ However, the bot needs to be in both servers for this to work.
 
 You can even use webhooks to repost messages if you run [coolbot.js](https://github.com/MysteryPancake/Discord-Reposter/blob/master/coolbot.js). However, it's glitchy, so I don't recommend it.
 
-It reposts backward from the newest message. Currently it's impossible to go forward from the oldest message because [discord.js](https://github.com/hydrabolt/discord.js) doesn't have a method to get the oldest message in a channel.
-
 ## Commands
 ### Repost To
 *Reposts to a channel.*
