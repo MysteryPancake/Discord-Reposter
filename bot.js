@@ -65,10 +65,9 @@ const systemMessages = {
 	GUILD_MEMBER_JOIN: " just joined."
 };
 
-async function sendMessage(message, channel, lastAuthor) {
-	const author = message.author;
-	if (author.id !== lastAuthor || message.type !== "DEFAULT") {
-		await channel.send("**" + author.tag + systemMessages[message.type] + "**").catch(console.error);
+async function sendMessage(message, channel, author) {
+	if (message.author.id !== author || message.type !== "DEFAULT") {
+		await channel.send("**" + message.author.tag + systemMessages[message.type] + "**").catch(console.error);
 	}
 	const content = message.content;
 	if (content) {
@@ -89,21 +88,21 @@ async function sendMessage(message, channel, lastAuthor) {
 	}
 }
 
-async function sendMessages(messages, channel, lastAuthor) {
+async function sendMessages(messages, channel, author) {
 	let last;
 	if (messages.size) {
 		const backward = messages.array().reverse();
 		for (let i = 0; i < backward.length; i++) {
-			await sendMessage(backward[i], channel, last ? last.author.id : lastAuthor);
+			await sendMessage(backward[i], channel, last ? last.author.id : author);
 			last = backward[i];
 		}
 	}
 }
 
-async function fetchMessages(message, channel, lastAuthor) {
+async function fetchMessages(message, channel, author) {
 	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(console.error);
 	if (messages.size) {
-		await sendMessages(messages, channel, lastAuthor);
+		await sendMessages(messages, channel, author);
 		const last = messages.last();
 		fetchMessages(last, channel, last.author.id);
 	} else {
