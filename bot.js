@@ -87,25 +87,25 @@ async function sendMessage(message, channel, lastAuthor) {
 			}
 		}
 	}
-	return { message: message, author: message.author.id };
 }
 
 async function sendMessages(messages, channel, lastAuthor) {
 	let last;
 	if (messages.size) {
-		for (const message of messages.values()) {
-			last = await sendMessage(message, channel, last ? last.author : lastAuthor);
+		const backward = messages.array().reverse();
+		for (let i = 0; i < backward.length; i++) {
+			await sendMessage(backward[i], channel, last ? last.author.id : lastAuthor);
+			last = backward[i];
 		}
 	}
-	return last && last.message;
 }
 
-async function fetchMessages(message, channel) {
-	const last = await sendMessage(message, channel);
-	const messages = await message.channel.fetchMessages({ limit: 100, before: message.id }).catch(console.error);
+async function fetchMessages(message, channel, lastAuthor) {
+	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(console.error);
 	if (messages.size) {
-		const lastMessage = await sendMessages(messages, channel, last.author);
-		fetchMessages(lastMessage, channel);
+		await sendMessages(messages, channel, lastAuthor);
+		const last = messages.last();
+		fetchMessages(last, channel, last.author.id);
 	} else {
 		channel.send("**Repost Complete!**").catch(console.error);
 	}
@@ -117,20 +117,20 @@ function capitalizeFirst(str) {
 
 async function sendInfo(from, to) {
 	const rich = new Discord.RichEmbed();
-	rich.setTitle(from.channel.name);
-	rich.setDescription(from.channel.topic || "No topic");
+	rich.setTitle(from.name);
+	rich.setDescription(from.topic || "No topic");
 	rich.setAuthor(from.guild.name, from.guild.iconURL);
-	rich.setFooter("Reposting from " + from.channel.id, client.user.displayAvatarURL);
+	rich.setFooter("Reposting from " + from.id, client.user.displayAvatarURL);
 	rich.setThumbnail(from.guild.iconURL);
 	rich.setTimestamp();
-	if (from.channel.parent) {
-		rich.addField("Channel Category", from.channel.parent.name, true);
+	if (from.parent) {
+		rich.addField("Channel Category", from.parent.name, true);
 	}
-	rich.addField("NSFW Channel", from.channel.nsfw, true);
-	rich.addField("Channel ID", from.channel.id, true);
-	rich.addField("Channel Type", from.channel.type, true);
-	rich.addField("Channel Creation Date", from.channel.createdAt, true);
-	rich.addField("Channel Creation Time", from.channel.createdTimestamp, true);
+	rich.addField("NSFW Channel", from.nsfw, true);
+	rich.addField("Channel ID", from.id, true);
+	rich.addField("Channel Type", from.type, true);
+	rich.addField("Channel Creation Date", from.createdAt, true);
+	rich.addField("Channel Creation Time", from.createdTimestamp, true);
 	rich.addField("Server ID", from.guild.id, true);
 	rich.addField("Server Owner", from.guild.owner.user.tag, true);
 	rich.addField("Server Region", from.guild.region, true);
@@ -162,22 +162,24 @@ async function sendInfo(from, to) {
 	rich.addField("Server Creation Time", from.guild.createdTimestamp, true);
 	await to.send(rich).catch(console.error);
 	await to.send("__**Pins**__").catch(console.error);
-	const pins = await from.channel.fetchPinnedMessages().catch(console.error);
+	const pins = await from.fetchPinnedMessages().catch(console.error);
 	await sendMessages(pins, to);
 	await to.send("__**Messages**__").catch(console.error);
-	fetchMessages(from, to);
+	const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(console.error);
+	const first = messages.first();
+	if (first) {
+		await sendMessage(first, to);
+		fetchMessages(first, to, first.author.id);
+	} else {
+		to.send("**Repost Complete!**").catch(console.error);
+	}
 }
 
 async function repost(id, message, direction) {
 	const channel = client.channels.get(id);
 	if (channel && (channel.type === "text" || channel.type === "group" || channel.type === "dm")) {
 		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
-		if (direction) {
-			const messages = await channel.fetchMessages({ limit: 1 }).catch(console.error);
-			sendInfo(messages.first(), message.channel);
-		} else {
-			sendInfo(message, channel);
-		}
+		sendInfo(direction ? channel : message.channel, direction ? message.channel : channel);
 	} else {
 		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!** Try using `/repost channels`.").catch(console.error);
 	}
