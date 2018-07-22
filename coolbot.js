@@ -12,59 +12,237 @@ client.on("ready", function() {
 	console.log("READY FOR ACTION!");
 });
 
-let lastMessage;
-const webhooks = {};
-
-function fetchMessages(message, channel) {
-	message.channel.fetchMessages({ limit: 100, before: message.id }).then(function(messages) {
-		messages.forEach(function(value) {
-			const sender = webhooks[value.author.username] || channel;
-			const content = value.content;
-			if (content) {
-				sender.send(content).then(function(sent) {
-					value.reactions.forEach(function(reaction) {
-						sent.react(reaction.emoji).catch(console.error);
-					});
-				}).catch(console.error);
+async function send(content, webhook, reactions) {
+	const sent = await webhook.send(content).catch(console.error);
+	if (reactions.size) {
+		for (const reaction of reactions.values()) {
+			const emoji = reaction.emoji;
+			if (client.emojis.has(emoji.id) || emoji.id === null) {
+				await sent.react(emoji).catch(console.error);
 			}
-			value.attachments.forEach(function(file) {
-				sender.send(file.url).then(function(sent) {
-					value.reactions.forEach(function(reaction) {
-						sent.react(reaction.emoji).catch(console.error);
-					});
-				}).catch(console.error);
-			});
-			lastMessage = value;
-		});
-		fetchMessages(lastMessage, channel);
-	}).catch(console.error);
+		}
+	}
+}
+
+function richEmbed(embed) {
+	const rich = new Discord.RichEmbed();
+	if (embed.author) {
+		rich.setAuthor(embed.author.name, embed.author.iconURL, embed.author.url);
+	}
+	rich.setColor(embed.color);
+	if (embed.description) {
+		rich.setDescription(embed.description);
+	}
+	for (let i = 0; i < embed.fields.length; i++) {
+		const field = embed.fields[i];
+		rich.addField(field.name, field.value, field.inline);
+	}
+	if (embed.footer) {
+		rich.setFooter(embed.footer.text, embed.footer.iconURL);
+	}
+	if (embed.image) {
+		rich.setImage(embed.image.url);
+	}
+	if (embed.thumbnail) {
+		rich.setThumbnail(embed.thumbnail.url);
+	}
+	rich.setTimestamp(embed.timestamp);
+	if (embed.title) {
+		rich.setTitle(embed.title);
+	}
+	rich.setURL(embed.url);
+	return rich;
+}
+
+const systemMessages = {
+	DEFAULT: "",
+	RECIPIENT_ADD: " added someone to the group.",
+	RECIPIENT_REMOVE: " removed someone from the group.",
+	CALL: " started a call.",
+	CHANNEL_NAME_CHANGE: " changed the name of this channel.",
+	CHANNEL_ICON_CHANGE: " changed the icon of this channel.",
+	PINS_ADD: " pinned a message to this channel.",
+	GUILD_MEMBER_JOIN: " just joined."
+};
+
+async function sendMessage(message, channel, webhook, author) {
+	if (message.type !== "DEFAULT") {
+		await channel.send("**" + message.author.tag + systemMessages[message.type] + "**").catch(console.error);
+	} else if (message.author.id !== author) {
+		await webhook.edit(message.author.username, message.author.displayAvatarURL).catch(console.error);
+	}
+	const content = message.content;
+	if (content) {
+		await send(content, webhook, message.reactions);
+	}
+	if (message.attachments.size) {
+		for (const attachment of message.attachments.values()) {
+			await send(attachment.filesize > 8000000 ? attachment.url : { files: [attachment.url] }, webhook, message.reactions);
+		}
+	}
+	if (message.embeds.length) {
+		for (let i = 0; i < message.embeds.length; i++) {
+			const embed = message.embeds[i];
+			if (embed.type === "rich") {
+				await send(richEmbed(embed), webhook, message.reactions);
+			}
+		}
+	}
+}
+
+async function sendMessages(messages, channel, webhook, author) {
+	let last;
+	if (messages.size) {
+		const backward = messages.array().reverse();
+		for (let i = 0; i < backward.length; i++) {
+			await sendMessage(backward[i], channel, webhook, last ? last.author.id : author);
+			last = backward[i];
+		}
+	}
+}
+
+async function fetchMessages(message, channel, webhook, author) {
+	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(console.error);
+	if (messages.size) {
+		await sendMessages(messages, channel, webhook, author);
+		const last = messages.last();
+		fetchMessages(last, channel, webhook, last.author.id);
+	} else {
+		channel.send("**Repost Complete!**").catch(console.error);
+	}
+}
+
+function capitalizeFirst(str) {
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+async function fetchWebhook(channel) {
+	const webhooks = await channel.fetchWebhooks();
+	for (const webhook of webhooks.values()) {
+		if (webhook.owner.id === client.user.id) {
+			return webhook;
+		}
+	}
+	return channel.createWebhook("Reposter", client.user.displayAvatarURL).catch(console.error);
+}
+
+async function sendInfo(from, to) {
+	const rich = new Discord.RichEmbed();
+	rich.setTitle(from.name);
+	rich.setDescription(from.topic || "No topic");
+	rich.setAuthor(from.guild.name, from.guild.iconURL);
+	rich.setFooter("Reposting from " + from.id, client.user.displayAvatarURL);
+	rich.setThumbnail(from.guild.iconURL);
+	rich.setTimestamp();
+	if (from.parent) {
+		rich.addField("Channel Category", from.parent.name, true);
+	}
+	rich.addField("NSFW Channel", from.nsfw, true);
+	rich.addField("Channel ID", from.id, true);
+	rich.addField("Channel Type", from.type, true);
+	rich.addField("Channel Creation Date", from.createdAt, true);
+	rich.addField("Channel Creation Time", from.createdTimestamp, true);
+	rich.addField("Server ID", from.guild.id, true);
+	rich.addField("Server Owner", from.guild.owner.user.tag, true);
+	rich.addField("Server Region", from.guild.region, true);
+	const channels = {};
+	for (const channel of from.guild.channels.values()) {
+		channels[channel.type] = (channels[channel.type] || 0) + 1;
+	}
+	for (let channel in channels) {
+		rich.addField(capitalizeFirst(channel) + " Channels", channels[channel], true);
+	}
+	let bots = 0;
+	for (const member of from.guild.members.values()) {
+		if (member.user.bot) {
+			bots++;
+		}
+	}
+	rich.addField("Server Humans", from.guild.members.size - bots, true);
+	rich.addField("Server Bots", bots, true);
+	rich.addField("Server Roles", from.guild.roles.size, true);
+	rich.addField("Server Emojis", from.guild.emojis.size, true);
+	rich.addField("Server Verification", from.guild.verificationLevel, true);
+	rich.addField("Default Role", from.guild.defaultRole.name, true);
+	rich.addField("Default Role ID", from.guild.defaultRole.id, true);
+	if (from.guild.systemChannel) {
+		rich.addField("Default Channel", from.guild.systemChannel.name, true);
+		rich.addField("Default Channel ID", from.guild.systemChannelID, true);
+	}
+	rich.addField("Server Creation Date", from.guild.createdAt, true);
+	rich.addField("Server Creation Time", from.guild.createdTimestamp, true);
+	await to.send(rich).catch(console.error);
+	const webhook = await fetchWebhook(to);
+	await to.send("__**Pins**__").catch(console.error);
+	const pins = await from.fetchPinnedMessages().catch(console.error);
+	await sendMessages(pins, to, webhook);
+	await to.send("__**Messages**__").catch(console.error);
+	const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(console.error);
+	const first = messages.first();
+	if (first) {
+		await sendMessage(first, to, webhook);
+		fetchMessages(first, to, webhook, first.author.id);
+	} else {
+		to.send("**Repost Complete!**").catch(console.error);
+	}
+}
+
+async function repost(id, message, direction) {
+	const channel = client.channels.get(id);
+	if (channel && (channel.type === "text" || channel.type === "group" || channel.type === "dm")) {
+		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
+		sendInfo(direction ? channel : message.channel, direction ? message.channel : channel);
+	} else {
+		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!** Try using `/repost channels`.").catch(console.error);
+	}
+}
+
+function sendCommands(to) {
+	const rich = new Discord.RichEmbed();
+	rich.setTitle("Reposter Commands");
+	rich.setDescription("By MysteryPancake");
+	rich.setAuthor(client.user.username, client.user.displayAvatarURL);
+	rich.setFooter(client.user.id, client.user.displayAvatarURL);
+	rich.setThumbnail(client.user.displayAvatarURL);
+	rich.setTimestamp();
+	rich.setURL("https://github.com/MysteryPancake/Discord-Reposter#commands");
+	rich.addField("Repost To", "*Reposts to a channel.*```/repost to <CHANNEL_ID>\n/repost <CHANNEL_ID>```", false);
+	rich.addField("Repost From", "*Reposts from a channel.*```/repost from <CHANNEL_ID>```", false);
+	rich.addField("Repost Channels", "*Posts the channels the bot is in.*```/repost channels```", false);
+	rich.addField("Repost Commands", "*Posts a command list.*```/repost commands\n/repost help```", false);
+	rich.addField("Channel ID", "```" + to.id + "```", false);
+	to.send(rich).catch(console.error);
+}
+
+async function sendChannels(message) {
+	await message.channel.send("**Sending " + client.channels.size + " channels to your direct messages!**").catch(console.error);
+	const dm = await message.author.createDM().catch(console.error);
+	await dm.send("__**Channel List**__").catch(console.error);
+	for (const channel of client.channels.values()) {
+		const rich = new Discord.RichEmbed();
+		rich.setAuthor(channel.name, channel.guild.iconURL);
+		rich.setFooter(capitalizeFirst(channel.type) + " Channel", client.user.displayAvatarURL);
+		rich.setTimestamp();
+		rich.addField("Channel ID", "`" + channel.id + "`", false);
+		await dm.send(rich).catch(console.error);
+	}
 }
 
 client.on("message", function(message) {
 	if (message.author.bot) return;
-	if (message.content.startsWith("/repost")) {
-		const id = message.content.substr(8);
-		const channel = client.channels.get(id);
-		if (channel) {
-			message.channel.send("Reposting to " + id + "!").catch(console.error);
-			channel.send(message.guild.iconURL).catch(console.error);
-			channel.send("__**" + message.guild.name + "**__").catch(console.error);
-			channel.send("**" + message.channel.name + "**").catch(console.error);
-			channel.send("*" + (message.channel.topic || "No topic") + "*").catch(console.error);
-			const promises = [];
-			message.channel.members.forEach(function(member) {
-				if (!member.user.bot) {
-					const username = member.user.username;
-					promises.push(channel.createWebhook(username, member.user.displayAvatarURL).then(function(hook) {
-						webhooks[username] = hook;
-					}).catch(console.error));
-				}
-			});
-			Promise.all(promises).then(function() {
-				fetchMessages(message, channel);
-			});
+	const args = message.content.split(" ");
+	if (args[0] === "/repost") {
+		if (args[1] === "help" || args[1] === "commands") {
+			sendCommands(message.channel);
+		} else if (args[1] === "channels") {
+			sendChannels(message);
 		} else {
-			message.channel.send("Couldn't repost to " + id + "!").catch(console.error);
+			const last = args[2];
+			if (last) {
+				repost(last, message, args[1] === "from");
+			} else {
+				repost(args[1], message, false);
+			}
 		}
 	}
 });
