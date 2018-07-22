@@ -55,7 +55,6 @@ function richEmbed(embed) {
 }
 
 const systemMessages = {
-	DEFAULT: "",
 	RECIPIENT_ADD: " added someone to the group.",
 	RECIPIENT_REMOVE: " removed someone from the group.",
 	CALL: " started a call.",
@@ -121,7 +120,7 @@ function capitalizeFirst(str) {
 }
 
 async function fetchWebhook(channel) {
-	const webhooks = await channel.fetchWebhooks();
+	const webhooks = await channel.fetchWebhooks().catch(console.error);
 	for (const webhook of webhooks.values()) {
 		if (webhook.owner.id === client.user.id) {
 			return webhook;
@@ -212,6 +211,7 @@ function sendCommands(to) {
 	rich.setURL("https://github.com/MysteryPancake/Discord-Reposter#commands");
 	rich.addField("Repost To", "*Reposts to a channel.*```/repost to <CHANNEL_ID>\n/repost <CHANNEL_ID>```", false);
 	rich.addField("Repost From", "*Reposts from a channel.*```/repost from <CHANNEL_ID>```", false);
+	rich.addField("Repost Webhook", "*Reposts through a webhook.*```/repostwebhook\n/reposthook```Instead of:```/repost```", false);
 	rich.addField("Repost Channels", "*Posts the channels the bot is in.*```/repost channels```", false);
 	rich.addField("Repost Commands", "*Posts a command list.*```/repost commands\n/repost help```", false);
 	rich.addField("Channel ID", "```" + to.id + "```", false);
