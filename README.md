@@ -5,8 +5,6 @@ It reposts all the messages from one channel to another, which can even be in an
 
 However, the bot needs to be in both servers for this to work.
 
-You can even use webhooks to repost messages if you run [coolbot.js](https://github.com/MysteryPancake/Discord-Reposter/blob/master/coolbot.js)!
-
 ## Commands
 ### Repost To
 *Reposts to a channel.*
@@ -17,6 +15,11 @@ You can even use webhooks to repost messages if you run [coolbot.js](https://git
 *Reposts from a channel.*
 
 `/repost from <CHANNEL_ID>`
+
+### Repost Webhook
+*Reposts through a webhook.*
+
+`/repostwebhook` or `/reposthook` instead of `/repost`
 
 ### Repost Channels
 *Posts the channels the bot is in.*
