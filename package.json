@@ -2,14 +2,14 @@
   "name": "Discord-Reposter",
   "version": "1.0.0",
   "description": "Bot for reposting Discord messages.",
-  "main": "bot.js",
+  "main": "reposter.js",
   "engines": {
   	"node": "10.x",
   	"npm": "*"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node bot.js"
+    "start": "node reposter.js"
   },
   "keywords": [
     "discord",
@@ -34,8 +34,5 @@
   "license": "MIT",
   "dependencies": {
     "discord.js": "^11.3.2"
-  },
-  "devDependencies": {
-    "babel-eslint": "^8.2.6"
   }
 }
