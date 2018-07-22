@@ -65,46 +65,52 @@ const systemMessages = {
 	GUILD_MEMBER_JOIN: " just joined."
 };
 
-async function sendMessage(message, channel, author) {
-	if (message.author.id !== author || message.type !== "DEFAULT") {
+async function sendMessage(message, channel, webhook, author) {
+	if (message.type !== "DEFAULT") {
 		await channel.send("**" + message.author.tag + systemMessages[message.type] + "**").catch(console.error);
+	} else if (message.author.id !== author) {
+		if (webhook) {
+			await webhook.edit(message.author.username, message.author.displayAvatarURL).catch(console.error);
+		} else {
+			await channel.send("**" + message.author.tag + "**").catch(console.error);
+		}
 	}
 	const content = message.content;
 	if (content) {
-		await send(content, channel, message.reactions);
+		await send(content, webhook ? webhook : channel, message.reactions);
 	}
 	if (message.attachments.size) {
 		for (const attachment of message.attachments.values()) {
-			await send(attachment.filesize > 8000000 ? attachment.url : { files: [attachment.url] }, channel, message.reactions);
+			await send(attachment.filesize > 8000000 ? attachment.url : { files: [attachment.url] }, webhook ? webhook : channel, message.reactions);
 		}
 	}
 	if (message.embeds.length) {
 		for (let i = 0; i < message.embeds.length; i++) {
 			const embed = message.embeds[i];
 			if (embed.type === "rich") {
-				await send(richEmbed(embed), channel, message.reactions);
+				await send(richEmbed(embed), webhook ? webhook : channel, message.reactions);
 			}
 		}
 	}
 }
 
-async function sendMessages(messages, channel, author) {
+async function sendMessages(messages, channel, webhook, author) {
 	let last;
 	if (messages.size) {
 		const backward = messages.array().reverse();
 		for (let i = 0; i < backward.length; i++) {
-			await sendMessage(backward[i], channel, last ? last.author.id : author);
+			await sendMessage(backward[i], channel, webhook, last ? last.author.id : author);
 			last = backward[i];
 		}
 	}
 }
 
-async function fetchMessages(message, channel, author) {
+async function fetchMessages(message, channel, webhook, author) {
 	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(console.error);
 	if (messages.size) {
-		await sendMessages(messages, channel, author);
+		await sendMessages(messages, channel, webhook, author);
 		const last = messages.last();
-		fetchMessages(last, channel, last.author.id);
+		fetchMessages(last, channel, webhook, last.author.id);
 	} else {
 		channel.send("**Repost Complete!**").catch(console.error);
 	}
@@ -114,7 +120,17 @@ function capitalizeFirst(str) {
 	return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-async function sendInfo(from, to) {
+async function fetchWebhook(channel) {
+	const webhooks = await channel.fetchWebhooks();
+	for (const webhook of webhooks.values()) {
+		if (webhook.owner.id === client.user.id) {
+			return webhook;
+		}
+	}
+	return channel.createWebhook("Reposter", client.user.displayAvatarURL).catch(console.error);
+}
+
+async function sendInfo(from, to, hook) {
 	const rich = new Discord.RichEmbed();
 	rich.setTitle(from.name);
 	rich.setDescription(from.topic || "No topic");
@@ -160,25 +176,26 @@ async function sendInfo(from, to) {
 	rich.addField("Server Creation Date", from.guild.createdAt, true);
 	rich.addField("Server Creation Time", from.guild.createdTimestamp, true);
 	await to.send(rich).catch(console.error);
+	const webhook = hook && await fetchWebhook(to);
 	await to.send("__**Pins**__").catch(console.error);
 	const pins = await from.fetchPinnedMessages().catch(console.error);
-	await sendMessages(pins, to);
+	await sendMessages(pins, to, webhook);
 	await to.send("__**Messages**__").catch(console.error);
 	const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(console.error);
 	const first = messages.first();
 	if (first) {
-		await sendMessage(first, to);
-		fetchMessages(first, to, first.author.id);
+		await sendMessage(first, to, webhook);
+		fetchMessages(first, to, webhook, first.author.id);
 	} else {
 		to.send("**Repost Complete!**").catch(console.error);
 	}
 }
 
-async function repost(id, message, direction) {
+async function repost(id, message, webhook, direction) {
 	const channel = client.channels.get(id);
 	if (channel && (channel.type === "text" || channel.type === "group" || channel.type === "dm")) {
 		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
-		sendInfo(direction ? channel : message.channel, direction ? message.channel : channel);
+		sendInfo(direction ? channel : message.channel, direction ? message.channel : channel, webhook);
 	} else {
 		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!** Try using `/repost channels`.").catch(console.error);
 	}
@@ -218,7 +235,7 @@ async function sendChannels(message) {
 client.on("message", function(message) {
 	if (message.author.bot) return;
 	const args = message.content.split(" ");
-	if (args[0] === "/repost") {
+	if (args[0].startsWith("/repost")) {
 		if (args[1] === "help" || args[1] === "commands") {
 			sendCommands(message.channel);
 		} else if (args[1] === "channels") {
@@ -226,9 +243,9 @@ client.on("message", function(message) {
 		} else {
 			const last = args[2];
 			if (last) {
-				repost(last, message, args[1] === "from");
+				repost(last, message, args[0].endsWith("hook"), args[1] === "from");
 			} else {
-				repost(args[1], message, false);
+				repost(args[1], message, args[0].endsWith("hook"), false);
 			}
 		}
 	}
