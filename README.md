@@ -1,11 +1,11 @@
 # Discord Reposter
 A simple bot I made because I wanted my friends to stop deleting their messages.
 
-It reposts all the messages from one channel to another, which can even be in another server.
+It reposts all the messages from one channel to another, which can even be in another server!
 
 However, the bot needs to be in both servers for this to work.
 
-You can even use webhooks to repost messages if you run [coolbot.js](https://github.com/MysteryPancake/Discord-Reposter/blob/master/coolbot.js). However, it's glitchy, so I don't recommend it.
+You can even use webhooks to repost messages if you run [coolbot.js](https://github.com/MysteryPancake/Discord-Reposter/blob/master/coolbot.js)!
 
 ## Commands
 ### Repost To
