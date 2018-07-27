@@ -74,9 +74,8 @@ async function sendMessage(message, channel, webhook, author) {
 			await channel.send("**" + message.author.tag + "**").catch(console.error);
 		}
 	}
-	const content = message.content;
-	if (content) {
-		await send(content, webhook ? webhook : channel, message.reactions);
+	if (message.content) {
+		await send(message.content, webhook ? webhook : channel, message.reactions);
 	}
 	if (message.attachments.size) {
 		for (const attachment of message.attachments.values()) {
@@ -105,8 +104,10 @@ async function sendMessages(messages, channel, webhook, author) {
 }
 
 async function fetchMessages(message, channel, webhook, author) {
-	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(console.error);
-	if (messages.size) {
+	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(function() {
+		channel.send("**Couldn't fetch messages!**").catch(console.error);
+	});
+	if (messages && messages.size) {
 		await sendMessages(messages, channel, webhook, author);
 		const last = messages.last();
 		fetchMessages(last, channel, webhook, last.author.id);
@@ -120,7 +121,9 @@ function capitalizeFirst(str) {
 }
 
 async function fetchWebhook(channel) {
-	const webhooks = await channel.fetchWebhooks().catch(console.error);
+	const webhooks = await channel.fetchWebhooks().catch(function() {
+		return channel.createWebhook("Reposter", client.user.displayAvatarURL).catch(console.error);
+	});
 	for (const webhook of webhooks.values()) {
 		if (webhook.owner.id === client.user.id) {
 			return webhook;
@@ -190,13 +193,21 @@ async function sendInfo(from, to, hook) {
 	}
 }
 
+const whitelist = ["text", "group", "dm"];
+
 async function repost(id, message, webhook, direction) {
-	const channel = client.channels.get(id);
-	if (channel && (channel.type === "text" || channel.type === "group" || channel.type === "dm")) {
-		await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + id + "!**").catch(console.error);
-		sendInfo(direction ? channel : message.channel, direction ? message.channel : channel, webhook);
+	if (id === message.channel.id) {
+		message.channel.send("**Can't repost " + (direction ? "from" : "to") + " the same channel!**").catch(console.error);
 	} else {
-		message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!** Try using `/repost channels`.").catch(console.error);
+		const channel = client.channels.get(id);
+		if (!channel) {
+			message.channel.send("**Couldn't repost " + (direction ? "from" : "to") + " " + id + "!** Try using `/repost channels`.").catch(console.error);
+		} else if (whitelist.indexOf(channel.type) === -1) {
+			message.channel.send("**Can't repost " + (direction ? "from" : "to") + " " + channel.type + " channels!**").catch(console.error);
+		} else {
+			await message.channel.send("**Reposting " + (direction ? "from" : "to") + " " + channel.name + "!**").catch(console.error);
+			sendInfo(direction ? channel : message.channel, direction ? message.channel : channel, webhook);
+		}
 	}
 }
 
