@@ -27,7 +27,7 @@ However, the bot needs to be in both servers for this to work.
 `/repost channels`
 
 ### Repost Commands
-*Posts a command list.*
+*Posts the command list.*
 
 `/repost commands` or `/repost help`
 
