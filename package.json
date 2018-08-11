@@ -4,8 +4,8 @@
   "description": "Bot for reposting Discord messages.",
   "main": "reposter.js",
   "engines": {
-  	"node": "10.x",
-  	"npm": "*"
+    "node": "10.x",
+    "npm": "*"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -33,6 +33,6 @@
   "author": "MysteryPancake",
   "license": "MIT",
   "dependencies": {
-    "discord.js": "^11.3.2"
+    "discord.js": "^11.4.0"
   }
 }
