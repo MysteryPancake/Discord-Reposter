@@ -45,6 +45,6 @@ However, the bot needs to be in both servers for this to work.
 6. [Install discord.js](https://github.com/hydrabolt/discord.js): `npm install discord.js`
 7. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js): `npm start`
 8. Find the channel you want to repost from, and in that channel say `/repost to <CHANNEL>`, with `<CHANNEL>` as the channel you want to repost to.
-9. Hope it works
+9. Hope it works!
 
 ![Icon](repost.png?raw=true)
