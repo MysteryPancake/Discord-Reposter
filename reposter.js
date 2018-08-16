@@ -279,38 +279,42 @@ async function repost(id, message, webhook, direction) {
 	const channel = (id && id.id) ? id : client.channels.get(id);
 	const dir = direction ? "from" : "to";
 	if (!channel) {
-		const matches = [];
-		for (const match of client.channels.values()) {
-			if (id.toLowerCase().indexOf(match.name) !== -1) {
-				matches.push(match);
-			}
-		}
-		if (matches.length) {
-			if (matches.length === 1) {
-				repost(matches[0], message, webhook, direction);
-			} else {
-				await message.channel.send("**Found " + matches.length + " channels!**").catch(console.error);
-				for (let i = 0; i < matches.length; i++) {
-					const match = matches[i];
-					const rich = new Discord.RichEmbed();
-					rich.setFooter(capitalizeFirst(match.type) + " Channel", client.user.displayAvatarURL);
-					if (match.guild) {
-						rich.setAuthor(match.name, match.guild.iconURL);
-					} else if (match.recipient) {
-						rich.setAuthor(match.recipient.username, match.recipient.displayAvatarURL);
-					} else {
-						rich.setAuthor(match.name, match.iconURL);
-					}
-					rich.setTimestamp(match.createdAt);
-					rich.addField("Channel ID", "`" + match.id + "`", false);
-					const embed = await message.channel.send(rich).catch(console.error);
-					awaitReaction(embed, message.author.id, "✅", function() {
-						repost(match, message, webhook, direction);
-					});
+		if (message.mentions.channels.size) {
+			repost(message.mentions.channels.first(), message, webhook, direction);
+		} else {
+			const matches = [];
+			for (const match of client.channels.values()) {
+				if (id.toLowerCase() === match.name) {
+					matches.push(match);
 				}
 			}
-		} else {
-			message.channel.send("**Couldn't repost " + dir + " `" + id + "`!**").catch(console.error);
+			if (matches.length) {
+				if (matches.length === 1) {
+					repost(matches[0], message, webhook, direction);
+				} else {
+					await message.channel.send("**Found " + matches.length + " channels!**").catch(console.error);
+					for (let i = 0; i < matches.length; i++) {
+						const match = matches[i];
+						const rich = new Discord.RichEmbed();
+						rich.setFooter(capitalizeFirst(match.type) + " Channel", client.user.displayAvatarURL);
+						if (match.guild) {
+							rich.setAuthor(match.name, match.guild.iconURL);
+						} else if (match.recipient) {
+							rich.setAuthor(match.recipient.username, match.recipient.displayAvatarURL);
+						} else {
+							rich.setAuthor(match.name, match.iconURL);
+						}
+						rich.setTimestamp(match.createdAt);
+						rich.addField("Channel ID", "`" + match.id + "`", false);
+						const embed = await message.channel.send(rich).catch(console.error);
+						awaitReaction(embed, message.author.id, "✅", function() {
+							repost(match, message, webhook, direction);
+						});
+					}
+				}
+			} else {
+				message.channel.send("**Couldn't repost " + dir + " `" + id + "`!**").catch(console.error);
+			}
 		}
 	} else if (channel.id === message.channel.id) {
 		message.channel.send("**Can't repost " + dir + " the same channel!**").catch(console.error);
