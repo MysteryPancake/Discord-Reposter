@@ -281,7 +281,7 @@ async function repost(id, message, webhook, direction) {
 	if (!channel) {
 		const matches = [];
 		for (const match of client.channels.values()) {
-			if (match.name === id) {
+			if (id.toLowerCase().indexOf(match.name) !== -1) {
 				matches.push(match);
 			}
 		}
