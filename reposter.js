@@ -165,15 +165,15 @@ async function sendMessages(messages, channel, webhook, author) {
 }
 
 async function fetchMessages(message, channel, webhook, author) {
-	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(function() {
-		channel.send("**Couldn't fetch messages!**").catch(console.error);
+	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(async function() {
+		await channel.send("**Couldn't fetch messages!**").catch(console.error);
 	});
 	if (messages && messages.size) {
 		await sendMessages(messages, channel, webhook, author);
 		const last = messages.last();
-		fetchMessages(last, channel, webhook, last.author.id);
+		await fetchMessages(last, channel, webhook, last.author.id);
 	} else {
-		channel.send("**Repost Complete!**").catch(console.error);
+		await channel.send("**Repost Complete!**").catch(console.error);
 	}
 }
 
@@ -182,8 +182,8 @@ function capitalizeFirst(str) {
 }
 
 async function fetchWebhook(channel) {
-	const webhooks = await channel.fetchWebhooks().catch(function() {
-		channel.send("**Can't read webhooks!**").catch(console.error);
+	const webhooks = await channel.fetchWebhooks().catch(async function() {
+		await channel.send("**Can't read webhooks!**").catch(console.error);
 	});
 	if (webhooks) {
 		for (const webhook of webhooks.values()) {
@@ -256,20 +256,20 @@ async function sendInfo(from, to, hook) {
 	await to.send(rich).catch(console.error);
 	const webhook = hook && await fetchWebhook(to);
 	await to.send("__**Pins**__").catch(console.error);
-	const pins = await from.fetchPinnedMessages().catch(function() {
-		to.send("**Can't read pins!**").catch(console.error);
+	const pins = await from.fetchPinnedMessages().catch(async function() {
+		await to.send("**Can't read pins!**").catch(console.error);
 	});
 	await sendMessages(pins, to, webhook);
 	await to.send("__**Messages**__").catch(console.error);
-	const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(function() {
-		to.send("**Can't read messages!**").catch(console.error);
+	const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(async function() {
+		await to.send("**Can't read messages!**").catch(console.error);
 	});
 	const first = messages && messages.first();
 	if (first) {
 		await sendMessage(first, to, webhook);
-		fetchMessages(first, to, webhook, first.author.id);
+		await fetchMessages(first, to, webhook, first.author.id);
 	} else {
-		to.send("**Repost Complete!**").catch(console.error);
+		await to.send("**Repost Complete!**").catch(console.error);
 	}
 }
 
@@ -279,8 +279,14 @@ async function repost(id, message, webhook, direction) {
 	const channel = (id && id.id) ? id : client.channels.get(id);
 	const dir = direction ? "from" : "to";
 	if (!channel) {
-		if (message.mentions.channels.size) {
-			repost(message.mentions.channels.first(), message, webhook, direction);
+		const guild = client.guilds.get(id);
+		if (guild) {
+			await message.channel.send("**Reposting " + dir + " `" + (guild.name || id) + "`!**").catch(console.error);
+			for (const match of guild.channels.values()) {
+				await repost(match, message, webhook, direction);
+			}
+		} else if (message.mentions.channels.size) {
+			await repost(message.mentions.channels.first(), message, webhook, direction);
 		} else {
 			const matches = [];
 			for (const match of client.channels.values()) {
@@ -290,7 +296,7 @@ async function repost(id, message, webhook, direction) {
 			}
 			if (matches.length) {
 				if (matches.length === 1) {
-					repost(matches[0], message, webhook, direction);
+					await repost(matches[0], message, webhook, direction);
 				} else {
 					await message.channel.send("**Found " + matches.length + " channels!**").catch(console.error);
 					for (let i = 0; i < matches.length; i++) {
@@ -307,26 +313,26 @@ async function repost(id, message, webhook, direction) {
 						rich.setTimestamp(match.createdAt);
 						rich.addField("Channel ID", "`" + match.id + "`", false);
 						const embed = await message.channel.send(rich).catch(console.error);
-						awaitReaction(embed, message.author.id, "✅", function() {
-							repost(match, message, webhook, direction);
+						awaitReaction(embed, message.author.id, "✅", async function() {
+							await repost(match, message, webhook, direction);
 						});
 					}
 				}
 			} else {
-				message.channel.send("**Couldn't repost " + dir + " `" + id + "`!**").catch(console.error);
+				await message.channel.send("**Couldn't repost " + dir + " `" + id + "`!**").catch(console.error);
 			}
 		}
 	} else if (channel.id === message.channel.id) {
-		message.channel.send("**Can't repost " + dir + " the same channel!**").catch(console.error);
+		await message.channel.send("**Can't repost " + dir + " the same channel!**").catch(console.error);
 	} else if (!whitelist[channel.type]) {
-		message.channel.send("**Can't repost " + dir + " " + channel.type + " channels!**").catch(console.error);
+		await message.channel.send("**Can't repost " + dir + " " + channel.type + " channels!**").catch(console.error);
 	} else if (webhook && (direction ? message.channel.type : channel.type) === "dm") {
-		message.channel.send("**Can't create webhooks on DM channels!**").catch(console.error);
+		await message.channel.send("**Can't create webhooks on DM channels!**").catch(console.error);
 	} else if (channel.type === "text" && !direction && !channel.permissionsFor(client.user).has("SEND_MESSAGES")) {
-		message.channel.send("**Can't repost to `" + (channel.name || id) + "` without permission!**").catch(console.error);
+		await message.channel.send("**Can't repost to `" + (channel.name || id) + "` without permission!**").catch(console.error);
 	} else {
 		await message.channel.send("**Reposting " + dir + " `" + (channel.name || id) + "`!**").catch(console.error);
-		sendInfo(direction ? channel : message.channel, direction ? message.channel : channel, webhook);
+		await sendInfo(direction ? channel : message.channel, direction ? message.channel : channel, webhook);
 	}
 }
 
