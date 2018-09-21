@@ -65,7 +65,7 @@ const information = {
 };
 
 const enable = { "1": true, "true": true, "yes": true, "confirm": true, "agree": true, "enable": true, "on": true, "positive": true, "accept": true, "ye": true, "yep": true, "ya": true, "yah": true, "yeah": true, "sure": true, "ok": true, "okay": true };
-const disable = { "0": true, "false": true, "no": true, "deny": true, "disagree": true, "disable": true, "off": true, "negative": true, "-1": true, "null": true, "undefined": true, "nil": true, "nah": true, "na": true, "nope": true };
+const disable = { "0": true, "false": true, "no": true, "deny": true, "denied": true, "disagree": true, "disable": true, "off": true, "negative": true, "-1": true, "nah": true, "na": true, "nope": true, "stop": true, "end": true, "cease": true };
 
 function setBoolean(channel, key, value) {
 	const guild = (channel.guild || channel).id;
