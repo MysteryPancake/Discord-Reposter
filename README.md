@@ -24,7 +24,7 @@ However, the bot needs to be in both servers for this to work.
 ### Repost Stop
 *Stops reposting.*
 
-`/repost stop` or `/repost halt` or `/repost cease` or `/repost terminate` or `/repost suspend` or `/repost pause` or `/repost cancel` or `/repost end`
+`/repost stop` or `/repost halt` or `/repost cease` or `/repost terminate` or `/repost suspend` or `/repost cancel` or `/repost die` or `/repost end`
 
 ### Repost Commands
 *Posts the command list.*

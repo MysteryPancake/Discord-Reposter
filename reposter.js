@@ -426,7 +426,7 @@ function sendCommands(channel) {
 	rich.addField("Repost To", "*Reposts to a channel.*```" + prefix + "repost <CHANNEL>\n" + prefix + "repost to <CHANNEL>```", false);
 	rich.addField("Repost From", "*Reposts from a channel.*```" + prefix + "repost from <CHANNEL>```", false);
 	rich.addField("Repost Webhook", "*Reposts through a webhook.*```" + prefix + "reposthook\n" + prefix + "repostwebhook```Instead of:```" + prefix + "repost```", false);
-	rich.addField("Repost Stop", "*Stops reposting.*```" + prefix + "repost stop\n" + prefix + "repost halt\n" + prefix + "repost cease\n" + prefix + "repost terminate\n" + prefix + "repost suspend\n" + prefix + "repost pause\n" + prefix + "repost cancel\n" + prefix + "repost end```", false);
+	rich.addField("Repost Stop", "*Stops reposting.*```" + prefix + "repost stop\n" + prefix + "repost halt\n" + prefix + "repost cease\n" + prefix + "repost terminate\n" + prefix + "repost suspend\n" + prefix + "repost cancel\n" + prefix + "repost die\n" + prefix + "repost end```", false);
 	rich.addField("Repost Commands", "*Posts the command list.*```" + prefix + "repost help\n" + prefix + "repost commands```", false);
 	rich.addField("Repost Replace", "*Replaces text when reposting.*```" + prefix + "repost replace <FIND> <REPLACE>```", false);
 	rich.addField("Repost Replacements", "*Posts the replacement list.*```" + prefix + "repost replacements```", false);
@@ -453,7 +453,7 @@ client.on("message", function(message) {
 			setPrefix(message.channel, args[2]);
 		} else if (args[1] === "tags" || args[1] === "nicknames" || args[1] === "pins") {
 			setBoolean(message.channel, args[1], args[2]);
-		} else if (args[1] === "stop" || args[1] === "halt" || args[1] === "cease" || args[1] === "terminate" || args[1] === "suspend" || args[1] === "pause" || args[1] === "cancel" || args[1] === "end") {
+		} else if (args[1] === "stop" || args[1] === "halt" || args[1] === "cease" || args[1] === "terminate" || args[1] === "suspend" || args[1] === "cancel" || args[1] === "die" || args[1] === "end") {
 			information.active.delete(message.channel.id);
 			updateStatus();
 			message.channel.send("**Reposting Terminated!**").catch(console.log);
