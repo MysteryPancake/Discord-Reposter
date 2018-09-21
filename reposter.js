@@ -61,7 +61,8 @@ const information = {
 	replacements: {},
 	nicknames: {},
 	prefixes: {},
-	tags: {}
+	tags: {},
+	pins: {}
 };
 
 const enable = { "1": true, "true": true, "yes": true, "confirm": true, "agree": true, "enable": true, "on": true, "positive": true, "accept": true, "ye": true, "yep": true, "ya": true, "yah": true, "yeah": true, "sure": true, "ok": true, "okay": true };
@@ -317,12 +318,16 @@ async function sendInfo(from, to, hook) {
 		rich.addField("Channel Members", from.recipients.size, true);
 	}
 	await to.send(rich).catch(console.error);
+	if (!information.active.has(to.id)) return;
 	const webhook = hook && await fetchWebhook(to);
-	await to.send("__**Pins**__").catch(console.error);
-	const pins = await from.fetchPinnedMessages().catch(async function() {
-		await to.send("**Can't read pins!**").catch(console.error);
-	});
-	await sendMessages(pins, to, webhook);
+	if (information.pins[(to.guild || to).id]) {
+		await to.send("__**Pins**__").catch(console.error);
+		const pins = await from.fetchPinnedMessages().catch(async function() {
+			await to.send("**Can't read pins!**").catch(console.error);
+		});
+		await sendMessages(pins, to, webhook);
+	}
+	if (!information.active.has(to.id)) return;
 	await to.send("__**Messages**__").catch(console.error);
 	const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(async function() {
 		await to.send("**Can't read messages!**").catch(console.error);
@@ -428,6 +433,7 @@ function sendCommands(channel) {
 	rich.addField("Repost Prefix", "*Changes the bot prefix.*```" + prefix + "repost prefix <PREFIX>```", false);
 	rich.addField("Repost Tags", "*Toggles user tags when reposting.*```" + prefix + "repost tags\n" + prefix + "repost tags <STATE>```", false);
 	rich.addField("Repost Nicknames", "*Toggles nicknames when reposting.*```" + prefix + "repost nicknames\n" + prefix + "repost nicknames <STATE>```", false);
+	rich.addField("Repost Pins", "*Toggles pins when reposting.*```" + prefix + "repost pins\n" + prefix + "repost pins <STATE>```", false);
 	rich.addField("Channel ID", "```" + channel.id + "```", false);
 	channel.send(rich).catch(console.error);
 }
@@ -445,7 +451,7 @@ client.on("message", function(message) {
 			setReplacement(message.channel, args[2], args[3]);
 		} else if (args[1] === "prefix") {
 			setPrefix(message.channel, args[2]);
-		} else if (args[1] === "tags" || args[1] === "nicknames") {
+		} else if (args[1] === "tags" || args[1] === "nicknames" || args[1] === "pins") {
 			setBoolean(message.channel, args[1], args[2]);
 		} else if (args[1] === "stop" || args[1] === "halt" || args[1] === "cease" || args[1] === "terminate" || args[1] === "suspend" || args[1] === "pause" || args[1] === "cancel" || args[1] === "end") {
 			information.active.delete(message.channel.id);

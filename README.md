@@ -56,6 +56,11 @@ However, the bot needs to be in both servers for this to work.
 
 `/repost nicknames` or `/repost nicknames <STATE>`
 
+### Repost Pins
+*Toggles pins when reposting.*
+
+`/repost pins` or `/repost pins <STATE>`
+
 ## Setup
 1. [Create your app](https://discordapp.com/developers/applications/me).
 2. Click `Create a Bot User`.
