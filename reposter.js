@@ -5,17 +5,19 @@ console.log("LOADING LIBRARIES...");
 const Discord = require("discord.js");
 const client = new Discord.Client();
 
-client.login("<SECRET_BOT_TOKEN>");
+client.login("<SECRET_BOT_TOKEN>").catch(console.error);
 
 client.on("ready", function() {
-	client.user.setActivity("on " + client.guilds.size + " servers").catch(console.error);
+	client.user.setActivity(client.guilds.size + " server" + (client.guilds.size === 1 ? "" : "s"), { type: "WATCHING" }).catch(console.error);
 	console.log("READY FOR ACTION!");
 });
 
-async function send(content, channel, reactions) {
+async function send(channel, content, reactions) {
+	if (!information.active.has(channel.id)) return;
 	const sent = await channel.send(content).catch(console.error);
 	if (reactions.size) {
 		for (const reaction of reactions.values()) {
+			if (!information.active.has(channel.id)) break;
 			const emoji = reaction.emoji;
 			if (client.emojis.has(emoji.id) || emoji.id === null) {
 				await sent.react(emoji).catch(console.error);
@@ -54,22 +56,78 @@ function richEmbed(embed) {
 	return rich;
 }
 
-const replacements = {};
+const information = {
+	active: new Set(),
+	replacements: {},
+	nicknames: {},
+	prefixes: {},
+	tags: {}
+};
 
-function toggleReplacement(channel, find, replace) {
-	replacements[channel.id] = replacements[channel.id] || new Map();
+const enable = { "1": true, "true": true, "yes": true, "confirm": true, "agree": true, "enable": true, "on": true, "positive": true, "accept": true, "ye": true, "yep": true, "ya": true, "yah": true, "yeah": true, "sure": true, "ok": true, "okay": true };
+const disable = { "0": true, "false": true, "no": true, "deny": true, "disagree": true, "disable": true, "off": true, "negative": true, "-1": true, "null": true, "undefined": true, "nil": true, "nah": true, "na": true, "nope": true };
+
+function setBoolean(channel, key, value) {
+	const guild = (channel.guild || channel).id;
+	const enabled = information[key][guild];
+	const property = capitalizeFirst(key);
+	if (enable[value]) {
+		information[key][guild] = true;
+		channel.send("✅ **" + property + " on!**").catch(console.error);
+	} else if (disable[value]) {
+		information[key][guild] = false;
+		channel.send("❌ **" + property + " off!**").catch(console.error);
+	} else {
+		information[key][guild] = !enabled;
+		channel.send((enabled ? "❌" : "✅") + " **" + property + " toggled " + (enabled ? "off" : "on") + "!**").catch(console.error);
+	}
+}
+
+function niceName(channel, user) {
+	const guild = (channel.guild || channel).id;
+	if (information.nicknames[guild] && channel.guild) {
+		const member = channel.guild.member(user);
+		if (member) {
+			return member.displayName;
+		} else if (information.tags[guild]) {
+			return user.tag;
+		} else {
+			user.username;
+		}
+	} else if (information.tags[guild]) {
+		return user.tag;
+	} else {
+		return user.username;
+	}
+}
+
+function setPrefix(channel, prefix) {
+	const guild = (channel.guild || channel).id;
+	const previous = information.prefixes[guild] || "/";
+	if (prefix) {
+		information.prefixes[guild] = prefix;
+		channel.send("**Changed prefix from `" + previous + "` to `" + prefix + "`!**").catch(console.error);
+	} else {
+		channel.send("**Missing `prefix` argument! `" + previous + "repost prefix <PREFIX>`**").catch(console.error);
+	}
+}
+
+function setReplacement(channel, find, replace) {
+	const guild = (channel.guild || channel).id;
+	const prefix = information.prefixes[guild] || "/";
+	information.replacements[guild] = information.replacements[guild] || new Map();
 	if (find && replace) {
-		replacements[channel.id].set(find, replace);
+		information.replacements[guild].set(find, replace);
 		channel.send("**Replacing `" + find + "` with `" + replace + "`!**").catch(console.error);
 	} else if (find) {
-		const replacement = replacements[channel.id].get(find);
+		const replacement = information.replacements[guild].get(find);
 		if (replacement) {
 			channel.send("**`" + find + "` is replaced with `" + replacement + "`**").catch(console.error);
 		} else {
-			channel.send("**Missing `replace` argument! `/repost replace " + find + " <REPLACE>`**").catch(console.error);
+			channel.send("**Missing `replace` argument! `" + prefix + "repost replace " + find + " <REPLACE>`**").catch(console.error);
 		}
 	} else {
-		channel.send("**Missing `find` and `replace` arguments! `/repost replace <FIND> <REPLACE>`**").catch(console.error);
+		channel.send("**Missing `find` and `replace` arguments! `" + prefix + "repost replace <FIND> <REPLACE>`**").catch(console.error);
 	}
 }
 
@@ -85,7 +143,7 @@ async function awaitReaction(message, author, emoji, func) {
 }
 
 async function sendReplacements(channel, id) {
-	const data = replacements[channel.id];
+	const data = information.replacements[(channel.guild || channel).id];
 	if (data) {
 		const count = await channel.send("**This channel has " + data.size + " replacement" + (data.size === 1 ? "" : "s") + "!**").catch(console.error);
 		for (const replace of data.entries()) {
@@ -101,8 +159,8 @@ async function sendReplacements(channel, id) {
 	}
 }
 
-function replaceAll(str, channel) {
-	const data = replacements[channel.id];
+function replaceAll(channel, str) {
+	const data = information.replacements[(channel.guild || channel).id];
 	if (data) {
 		let replaced = str;
 		for (const replace of data.entries()) {
@@ -126,38 +184,41 @@ const systemMessages = {
 };
 
 async function sendMessage(message, channel, webhook, author) {
+	if (!information.active.has(channel.id)) return;
 	if (message.type !== "DEFAULT") {
-		await channel.send("**" + replaceAll(message.author.tag, channel) + systemMessages[message.type] + "**").catch(console.error);
+		await channel.send("**" + replaceAll(channel, niceName(channel, message.author)) + systemMessages[message.type] + "**").catch(console.error);
 	} else if (message.author.id !== author) {
 		if (webhook) {
-			await webhook.edit(replaceAll(message.author.username, channel), message.author.displayAvatarURL).catch(console.error);
+			await webhook.edit(replaceAll(channel, niceName(channel, message.author)), message.author.displayAvatarURL).catch(console.error);
 		} else {
-			await channel.send("**" + replaceAll(message.author.tag, channel) + "**").catch(console.error);
+			await channel.send("**" + replaceAll(channel, niceName(channel, message.author)) + "**").catch(console.error);
 		}
 	}
 	if (message.content) {
-		await send(replaceAll(message.content, channel), webhook ? webhook : channel, message.reactions);
+		await send(webhook ? webhook : channel, replaceAll(channel, message.content), message.reactions);
 	}
 	if (message.attachments.size) {
 		for (const attachment of message.attachments.values()) {
-			await send(attachment.filesize > 8000000 ? attachment.url : { files: [attachment.url] }, webhook ? webhook : channel, message.reactions);
+			await send(webhook ? webhook : channel, attachment.filesize > 8000000 ? attachment.url : { files: [attachment.url] }, message.reactions);
 		}
 	}
 	if (message.embeds.length) {
 		for (let i = 0; i < message.embeds.length; i++) {
 			const embed = message.embeds[i];
 			if (embed.type === "rich") {
-				await send(richEmbed(embed), webhook ? webhook : channel, message.reactions);
+				await send(webhook ? webhook : channel, richEmbed(embed), message.reactions);
 			}
 		}
 	}
 }
 
 async function sendMessages(messages, channel, webhook, author) {
+	if (!information.active.has(channel.id)) return;
 	let last;
 	if (messages && messages.size) {
 		const backward = messages.array().reverse();
 		for (let i = 0; i < backward.length; i++) {
+			if (!information.active.has(channel.id)) break;
 			await sendMessage(backward[i], channel, webhook, last ? last.author.id : author);
 			last = backward[i];
 		}
@@ -165,9 +226,11 @@ async function sendMessages(messages, channel, webhook, author) {
 }
 
 async function fetchMessages(message, channel, webhook, author) {
+	if (!information.active.has(channel.id)) return;
 	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(async function() {
 		await channel.send("**Couldn't fetch messages!**").catch(console.error);
 	});
+	if (!information.active.has(channel.id)) return;
 	if (messages && messages.size) {
 		await sendMessages(messages, channel, webhook, author);
 		const last = messages.last();
@@ -204,10 +267,10 @@ async function sendInfo(from, to, hook) {
 		rich.setAuthor(from.guild.name, from.guild.iconURL);
 		rich.setThumbnail(from.guild.iconURL);
 	} else if (from.recipient) {
-		rich.setAuthor(from.recipient.username, from.recipient.displayAvatarURL);
+		rich.setAuthor(niceName(to, from.recipient), from.recipient.displayAvatarURL);
 		rich.setThumbnail(from.recipient.displayAvatarURL);
 	} else {
-		rich.setAuthor(from.owner.username, from.iconURL);
+		rich.setAuthor(niceName(to, from.owner), from.iconURL);
 		rich.setThumbnail(from.iconURL);
 	}
 	rich.setTimestamp();
@@ -221,7 +284,7 @@ async function sendInfo(from, to, hook) {
 	rich.addField("Channel Creation Time", from.createdTimestamp, true);
 	if (from.guild) {
 		rich.addField("Server ID", from.guild.id, true);
-		rich.addField("Server Owner", from.guild.owner.user.tag, true);
+		rich.addField("Server Owner", niceName(to, from.guild.owner), true);
 		rich.addField("Server Region", from.guild.region, true);
 		const channels = new Map();
 		for (const channel of from.guild.channels.values()) {
@@ -250,7 +313,7 @@ async function sendInfo(from, to, hook) {
 		rich.addField("Server Creation Date", from.guild.createdAt, true);
 		rich.addField("Server Creation Time", from.guild.createdTimestamp, true);
 	} else if (from.recipients) {
-		rich.addField("Channel Owner", from.owner.tag, true);
+		rich.addField("Channel Owner", niceName(to, from.owner), true);
 		rich.addField("Channel Members", from.recipients.size, true);
 	}
 	await to.send(rich).catch(console.error);
@@ -273,6 +336,10 @@ async function sendInfo(from, to, hook) {
 	}
 }
 
+function updateStatus() {
+	client.user.setActivity(information.active.size + " repost" + (information.active.size === 1 ? "" : "s"), { type: "WATCHING" }).catch(console.error);
+}
+
 const whitelist = { text: true, group: true, dm: true };
 
 async function repost(id, message, webhook, direction) {
@@ -281,8 +348,11 @@ async function repost(id, message, webhook, direction) {
 	if (!channel) {
 		const guild = client.guilds.get(id);
 		if (guild) {
+			information.active.add(message.channel.id);
+			updateStatus();
 			await message.channel.send("**Reposting " + dir + " `" + (guild.name || id) + "`!**").catch(console.error);
 			for (const match of guild.channels.values()) {
+				if (!information.active.has(message.channel.id)) break;
 				await repost(match, message, webhook, direction);
 			}
 		} else if (message.mentions.channels.size) {
@@ -290,7 +360,7 @@ async function repost(id, message, webhook, direction) {
 		} else {
 			const matches = [];
 			for (const match of client.channels.values()) {
-				if (id.toLowerCase() === match.name) {
+				if (id === match.name) {
 					matches.push(match);
 				}
 			}
@@ -306,7 +376,7 @@ async function repost(id, message, webhook, direction) {
 						if (match.guild) {
 							rich.setAuthor(match.name, match.guild.iconURL);
 						} else if (match.recipient) {
-							rich.setAuthor(match.recipient.username, match.recipient.displayAvatarURL);
+							rich.setAuthor(niceName(message.channel, match.recipient), match.recipient.displayAvatarURL);
 						} else {
 							rich.setAuthor(match.name, match.iconURL);
 						}
@@ -331,40 +401,56 @@ async function repost(id, message, webhook, direction) {
 	} else if (channel.type === "text" && !direction && !channel.permissionsFor(client.user).has("SEND_MESSAGES")) {
 		await message.channel.send("**Can't repost to `" + (channel.name || id) + "` without permission!**").catch(console.error);
 	} else {
+		information.active.add(message.channel.id);
+		updateStatus();
 		await message.channel.send("**Reposting " + dir + " `" + (channel.name || id) + "`!**").catch(console.error);
 		await sendInfo(direction ? channel : message.channel, direction ? message.channel : channel, webhook);
 	}
 }
 
 function sendCommands(channel) {
+	const prefix = information.prefixes[(channel.guild || channel).id] || "/";
 	const rich = new Discord.RichEmbed();
 	rich.setTitle("Reposter Commands");
 	rich.setDescription("By MysteryPancake");
 	rich.setFooter(client.user.id, client.user.displayAvatarURL);
-	rich.setAuthor(client.user.username, client.user.displayAvatarURL, "https://github.com/MysteryPancake/Discord-Reposter");
+	rich.setAuthor(niceName(channel, client.user), client.user.displayAvatarURL, "https://github.com/MysteryPancake/Discord-Reposter");
 	rich.setThumbnail(client.user.displayAvatarURL);
 	rich.setTimestamp();
 	rich.setURL("https://github.com/MysteryPancake/Discord-Reposter#commands");
-	rich.addField("Repost To", "*Reposts to a channel.*```/repost to <CHANNEL>\n/repost <CHANNEL>```", false);
-	rich.addField("Repost From", "*Reposts from a channel.*```/repost from <CHANNEL>```", false);
-	rich.addField("Repost Webhook", "*Reposts through a webhook.*```/repostwebhook\n/reposthook```Instead of:```/repost```", false);
-	rich.addField("Repost Commands", "*Posts the command list.*```/repost commands\n/repost help```", false);
-	rich.addField("Repost Replace", "*Replaces text when reposting.*```/repost replace <FIND> <REPLACE>```", false);
-	rich.addField("Repost Replacements", "*Posts the replacement list.*```/repost replacements```", false);
+	rich.addField("Repost To", "*Reposts to a channel.*```" + prefix + "repost <CHANNEL>\n" + prefix + "repost to <CHANNEL>```", false);
+	rich.addField("Repost From", "*Reposts from a channel.*```" + prefix + "repost from <CHANNEL>```", false);
+	rich.addField("Repost Webhook", "*Reposts through a webhook.*```" + prefix + "reposthook\n" + prefix + "repostwebhook```Instead of:```" + prefix + "repost```", false);
+	rich.addField("Repost Stop", "*Stops reposting.*```" + prefix + "repost stop\n" + prefix + "repost halt\n" + prefix + "repost cease\n" + prefix + "repost terminate\n" + prefix + "repost suspend\n" + prefix + "repost pause\n" + prefix + "repost cancel\n" + prefix + "repost end```", false);
+	rich.addField("Repost Commands", "*Posts the command list.*```" + prefix + "repost help\n" + prefix + "repost commands```", false);
+	rich.addField("Repost Replace", "*Replaces text when reposting.*```" + prefix + "repost replace <FIND> <REPLACE>```", false);
+	rich.addField("Repost Replacements", "*Posts the replacement list.*```" + prefix + "repost replacements```", false);
+	rich.addField("Repost Prefix", "*Changes the bot prefix.*```" + prefix + "repost prefix <PREFIX>```", false);
+	rich.addField("Repost Tags", "*Toggles user tags when reposting.*```" + prefix + "repost tags\n" + prefix + "repost tags <STATE>```", false);
+	rich.addField("Repost Nicknames", "*Toggles nicknames when reposting.*```" + prefix + "repost nicknames\n" + prefix + "repost nicknames <STATE>```", false);
 	rich.addField("Channel ID", "```" + channel.id + "```", false);
 	channel.send(rich).catch(console.error);
 }
 
 client.on("message", function(message) {
 	if (message.author.bot) return;
-	const args = message.content.split(" ");
-	if (args[0].startsWith("/repost")) {
-		if (args[1] === "help" || args[1] === "commands") {
+	const args = message.content.toLowerCase().split(" ");
+	const prefix = information.prefixes[(message.guild || message.channel).id] || "/";
+	if (args[0].startsWith(prefix + "repost")) {
+		if (!args[1] || args[1] === "help" || args[1] === "commands") {
 			sendCommands(message.channel);
 		} else if (args[1] === "replacements") {
 			sendReplacements(message.channel, message.author.id);
 		} else if (args[1] === "replace") {
-			toggleReplacement(message.channel, args[2], args[3]);
+			setReplacement(message.channel, args[2], args[3]);
+		} else if (args[1] === "prefix") {
+			setPrefix(message.channel, args[2]);
+		} else if (args[1] === "tags" || args[1] === "nicknames") {
+			setBoolean(message.channel, args[1], args[2]);
+		} else if (args[1] === "stop" || args[1] === "halt" || args[1] === "cease" || args[1] === "terminate" || args[1] === "suspend" || args[1] === "pause" || args[1] === "cancel" || args[1] === "end") {
+			information.active.delete(message.channel.id);
+			updateStatus();
+			message.channel.send("**Reposting Terminated!**").catch(console.log);
 		} else {
 			const last = args[2];
 			if (last) {

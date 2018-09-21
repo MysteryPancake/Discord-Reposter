@@ -9,7 +9,7 @@ However, the bot needs to be in both servers for this to work.
 ### Repost To
 *Reposts to a channel.*
 
-`/repost to <CHANNEL>` or `/repost <CHANNEL>`
+`/repost <CHANNEL>` or `/repost to <CHANNEL>`
 
 ### Repost From
 *Reposts from a channel.*
@@ -19,12 +19,17 @@ However, the bot needs to be in both servers for this to work.
 ### Repost Webhook
 *Reposts through a webhook.*
 
-`/repostwebhook` or `/reposthook` instead of `/repost`
+`/reposthook` or `/repostwebhook` instead of `/repost`
+
+### Repost Stop
+*Stops reposting.*
+
+`/repost stop` or `/repost halt` or `/repost cease` or `/repost terminate` or `/repost suspend` or `/repost pause` or `/repost cancel` or `/repost end`
 
 ### Repost Commands
 *Posts the command list.*
 
-`/repost commands` or `/repost help`
+`/repost help` or `/repost commands`
 
 ### Repost Replace
 *Replaces text when reposting.*
@@ -35,6 +40,21 @@ However, the bot needs to be in both servers for this to work.
 *Posts the replacement list.*
 
 `/repost replacements`
+
+### Repost Prefix
+*Changes the bot prefix.*
+
+`/repost prefix <PREFIX>`
+
+### Repost Tags
+*Toggles user tags when reposting.*
+
+`/repost tags` or `/repost tags <STATE>`
+
+### Repost Nicknames
+*Toggles nicknames when reposting.*
+
+`/repost nicknames` or `/repost nicknames <STATE>`
 
 ## Setup
 1. [Create your app](https://discordapp.com/developers/applications/me).
