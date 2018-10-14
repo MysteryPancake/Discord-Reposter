@@ -103,10 +103,10 @@ function setBoolean(channel, key, value) {
 	}
 }
 
-function niceName(channel, user) {
-	const guild = (channel.guild || channel).id;
-	if (information.nicknames[guild] && channel.guild) {
-		const member = channel.guild.member(user);
+function niceName(to, from, user) {
+	const guild = (to.guild || to).id;
+	if (information.nicknames[guild] && from.guild) {
+		const member = from.guild.member(user);
 		if (member) {
 			return member.displayName;
 		} else if (information.tags[guild]) {
@@ -206,12 +206,12 @@ const systemMessages = {
 async function sendMessage(message, channel, webhook, author) {
 	if (inactive(channel.id, message.channel.id)) return;
 	if (message.type !== "DEFAULT") {
-		await channel.send("**" + replaceAll(channel, niceName(channel, message.author)) + systemMessages[message.type] + "**").catch(console.error);
+		await channel.send("**" + replaceAll(channel, niceName(channel, message.channel, message.author)) + systemMessages[message.type] + "**").catch(console.error);
 	} else if (message.author.id !== author) {
 		if (webhook) {
-			await webhook.edit(replaceAll(channel, niceName(channel, message.author)), message.author.displayAvatarURL).catch(console.error);
+			await webhook.edit(replaceAll(channel, niceName(channel, message.channel, message.author)), message.author.displayAvatarURL).catch(console.error);
 		} else {
-			await channel.send("**" + replaceAll(channel, niceName(channel, message.author)) + "**").catch(console.error);
+			await channel.send("**" + replaceAll(channel, niceName(channel, message.channel, message.author)) + "**").catch(console.error);
 		}
 	}
 	if (message.content) {
@@ -274,7 +274,7 @@ async function fetchWebhook(channel) {
 	}
 }
 
-async function sendInfo(from, to, hook) {
+async function sendInfo(to, from, hook) {
 	const rich = new Discord.RichEmbed();
 	rich.setTitle(from.name || from.id);
 	rich.setDescription(from.topic || "No topic");
@@ -283,10 +283,10 @@ async function sendInfo(from, to, hook) {
 		rich.setAuthor(from.guild.name, from.guild.iconURL);
 		rich.setThumbnail(from.guild.iconURL);
 	} else if (from.recipient) {
-		rich.setAuthor(niceName(to, from.recipient), from.recipient.displayAvatarURL);
+		rich.setAuthor(niceName(to, from, from.recipient), from.recipient.displayAvatarURL);
 		rich.setThumbnail(from.recipient.displayAvatarURL);
 	} else {
-		rich.setAuthor(niceName(to, from.owner), from.iconURL);
+		rich.setAuthor(niceName(to, from, from.owner), from.iconURL);
 		rich.setThumbnail(from.iconURL);
 	}
 	rich.setTimestamp();
@@ -300,7 +300,7 @@ async function sendInfo(from, to, hook) {
 	rich.addField("Channel Creation Time", from.createdTimestamp, true);
 	if (from.guild) {
 		rich.addField("Server ID", from.guild.id, true);
-		rich.addField("Server Owner", niceName(to, from.guild.owner), true);
+		rich.addField("Server Owner", niceName(to, from, from.guild.owner.user), true);
 		rich.addField("Server Region", from.guild.region, true);
 		const channels = new Map();
 		for (const channel of from.guild.channels.values()) {
@@ -329,7 +329,7 @@ async function sendInfo(from, to, hook) {
 		rich.addField("Server Creation Date", from.guild.createdAt, true);
 		rich.addField("Server Creation Time", from.guild.createdTimestamp, true);
 	} else if (from.recipients) {
-		rich.addField("Channel Owner", niceName(to, from.owner), true);
+		rich.addField("Channel Owner", niceName(to, from, from.owner), true);
 		rich.addField("Channel Members", from.recipients.size, true);
 	}
 	await to.send(rich).catch(console.error);
@@ -392,7 +392,7 @@ async function repost(id, message, webhook, direction, live) {
 						if (match.guild) {
 							rich.setAuthor(match.name, match.guild.iconURL);
 						} else if (match.recipient) {
-							rich.setAuthor(niceName(message.channel, match.recipient), match.recipient.displayAvatarURL);
+							rich.setAuthor(niceName(message.channel, match, match.recipient), match.recipient.displayAvatarURL);
 						} else {
 							rich.setAuthor(match.name, match.iconURL);
 						}
@@ -417,17 +417,17 @@ async function repost(id, message, webhook, direction, live) {
 	} else if (channel.type === "text" && !direction && !channel.permissionsFor(client.user).has("SEND_MESSAGES")) {
 		await message.channel.send("**Can't repost to `" + (channel.name || id) + "` without permission!**").catch(console.error);
 	} else {
-		const from = direction ? channel : message.channel;
 		const to = direction ? message.channel : channel;
-		information.active.add(from.id);
+		const from = direction ? channel : message.channel;
 		information.active.add(to.id);
+		information.active.add(from.id);
 		updateStatus();
 		await message.channel.send("**Reposting" + (live ? " live " : " ") + dir + " `" + (channel.name || id) + "`!**").catch(console.error);
 		if (live) {
 			const hook = webhook && await fetchWebhook(to);
 			information.live[from.id] = { channel: to, hook: hook };
 		} else {
-			await sendInfo(from, to, webhook);
+			await sendInfo(to, from, webhook);
 		}
 	}
 }
@@ -438,7 +438,7 @@ function sendCommands(channel) {
 	rich.setTitle("Reposter Commands");
 	rich.setDescription("By MysteryPancake");
 	rich.setFooter(client.user.id, client.user.displayAvatarURL);
-	rich.setAuthor(niceName(channel, client.user), client.user.displayAvatarURL, "https://github.com/MysteryPancake/Discord-Reposter");
+	rich.setAuthor(niceName(channel, channel, client.user), client.user.displayAvatarURL, "https://github.com/MysteryPancake/Discord-Reposter");
 	rich.setThumbnail(client.user.displayAvatarURL);
 	rich.setTimestamp();
 	rich.setURL("https://github.com/MysteryPancake/Discord-Reposter#commands");
