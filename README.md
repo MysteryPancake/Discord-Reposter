@@ -21,6 +21,11 @@ However, the bot needs to be in both servers for this to work.
 
 `/reposthook` or `/repostwebhook` instead of `/repost`
 
+### Repost Live
+*Reposts messages as they come.*
+
+`/repostlive` or `/repostlivehook` instead of `/repost`
+
 ### Repost Stop
 *Stops reposting.*
 

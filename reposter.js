@@ -13,11 +13,12 @@ client.on("ready", function() {
 });
 
 async function send(channel, content, reactions) {
-	if (!information.active.has(channel.id)) return;
+	const channelID = channel.channelID || channel.id;
+	if (inactive(channelID)) return;
 	const sent = await channel.send(content).catch(console.error);
 	if (reactions.size) {
 		for (const reaction of reactions.values()) {
-			if (!information.active.has(channel.id)) break;
+			if (inactive(channelID)) break;
 			const emoji = reaction.emoji;
 			if (client.emojis.has(emoji.id) || emoji.id === null) {
 				await sent.react(emoji).catch(console.error);
@@ -62,7 +63,8 @@ const information = {
 	nicknames: {},
 	prefixes: {},
 	tags: {},
-	pins: {}
+	pins: {},
+	live: {}
 };
 
 const enable = { "1": true, "true": true, "yes": true, "confirm": true, "agree": true, "enable": true, "on": true, "positive": true, "accept": true, "ye": true, "yep": true, "ya": true, "yah": true, "yeah": true, "sure": true, "ok": true, "okay": true };
@@ -81,6 +83,14 @@ function setBoolean(channel, key, value) {
 	} else {
 		information[key][guild] = !enabled;
 		channel.send((enabled ? "❌" : "✅") + " **" + property + " toggled " + (enabled ? "off" : "on") + "!**").catch(console.error);
+	}
+}
+
+function inactive(to, from) {
+	if (from) {
+		return !information.active.has(from) || !information.active.has(to);
+	} else {
+		return !information.active.has(to);
 	}
 }
 
@@ -185,7 +195,7 @@ const systemMessages = {
 };
 
 async function sendMessage(message, channel, webhook, author) {
-	if (!information.active.has(channel.id)) return;
+	if (inactive(channel.id, message.channel.id)) return;
 	if (message.type !== "DEFAULT") {
 		await channel.send("**" + replaceAll(channel, niceName(channel, message.author)) + systemMessages[message.type] + "**").catch(console.error);
 	} else if (message.author.id !== author) {
@@ -214,12 +224,12 @@ async function sendMessage(message, channel, webhook, author) {
 }
 
 async function sendMessages(messages, channel, webhook, author) {
-	if (!information.active.has(channel.id)) return;
+	if (inactive(channel.id)) return;
 	let last;
 	if (messages && messages.size) {
 		const backward = messages.array().reverse();
 		for (let i = 0; i < backward.length; i++) {
-			if (!information.active.has(channel.id)) break;
+			if (inactive(channel.id, backward[i].channel.id)) break;
 			await sendMessage(backward[i], channel, webhook, last ? last.author.id : author);
 			last = backward[i];
 		}
@@ -227,11 +237,11 @@ async function sendMessages(messages, channel, webhook, author) {
 }
 
 async function fetchMessages(message, channel, webhook, author) {
-	if (!information.active.has(channel.id)) return;
+	if (inactive(channel.id, message.channel.id)) return;
 	const messages = await message.channel.fetchMessages({ limit: 100, after: message.id }).catch(async function() {
 		await channel.send("**Couldn't fetch messages!**").catch(console.error);
 	});
-	if (!information.active.has(channel.id)) return;
+	if (inactive(channel.id, message.channel.id)) return;
 	if (messages && messages.size) {
 		await sendMessages(messages, channel, webhook, author);
 		const last = messages.last();
@@ -318,7 +328,7 @@ async function sendInfo(from, to, hook) {
 		rich.addField("Channel Members", from.recipients.size, true);
 	}
 	await to.send(rich).catch(console.error);
-	if (!information.active.has(to.id)) return;
+	if (inactive(to.id, from.id)) return;
 	const webhook = hook && await fetchWebhook(to);
 	if (information.pins[(to.guild || to).id]) {
 		await to.send("__**Pins**__").catch(console.error);
@@ -327,7 +337,7 @@ async function sendInfo(from, to, hook) {
 		});
 		await sendMessages(pins, to, webhook);
 	}
-	if (!information.active.has(to.id)) return;
+	if (inactive(to.id, from.id)) return;
 	await to.send("__**Messages**__").catch(console.error);
 	const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(async function() {
 		await to.send("**Can't read messages!**").catch(console.error);
@@ -347,7 +357,7 @@ function updateStatus() {
 
 const whitelist = { text: true, group: true, dm: true };
 
-async function repost(id, message, webhook, direction) {
+async function repost(id, message, webhook, direction, live) {
 	const channel = (id && id.id) ? id : client.channels.get(id);
 	const dir = direction ? "from" : "to";
 	if (!channel) {
@@ -355,13 +365,15 @@ async function repost(id, message, webhook, direction) {
 		if (guild) {
 			information.active.add(message.channel.id);
 			updateStatus();
-			await message.channel.send("**Reposting " + dir + " `" + (guild.name || id) + "`!**").catch(console.error);
+			await message.channel.send("**Reposting" + (live ? " live " : " ") + dir + " `" + (guild.name || id) + "`!**").catch(console.error);
 			for (const match of guild.channels.values()) {
-				if (!information.active.has(message.channel.id)) break;
-				await repost(match, message, webhook, direction);
+				if (inactive(message.channel.id)) break;
+				information.active.add(match.id);
+				updateStatus();
+				await repost(match, message, webhook, direction, live);
 			}
 		} else if (message.mentions.channels.size) {
-			await repost(message.mentions.channels.first(), message, webhook, direction);
+			await repost(message.mentions.channels.first(), message, webhook, direction, live);
 		} else {
 			const matches = [];
 			for (const match of client.channels.values()) {
@@ -371,7 +383,7 @@ async function repost(id, message, webhook, direction) {
 			}
 			if (matches.length) {
 				if (matches.length === 1) {
-					await repost(matches[0], message, webhook, direction);
+					await repost(matches[0], message, webhook, direction, live);
 				} else {
 					await message.channel.send("**Found " + matches.length + " channels!**").catch(console.error);
 					for (let i = 0; i < matches.length; i++) {
@@ -389,7 +401,7 @@ async function repost(id, message, webhook, direction) {
 						rich.addField("Channel ID", "`" + match.id + "`", false);
 						const embed = await message.channel.send(rich).catch(console.error);
 						awaitReaction(embed, message.author.id, "✅", async function() {
-							await repost(match, message, webhook, direction);
+							await repost(match, message, webhook, direction, live);
 						});
 					}
 				}
@@ -406,10 +418,18 @@ async function repost(id, message, webhook, direction) {
 	} else if (channel.type === "text" && !direction && !channel.permissionsFor(client.user).has("SEND_MESSAGES")) {
 		await message.channel.send("**Can't repost to `" + (channel.name || id) + "` without permission!**").catch(console.error);
 	} else {
-		information.active.add(message.channel.id);
+		const from = direction ? channel : message.channel;
+		const to = direction ? message.channel : channel;
+		information.active.add(from.id);
+		information.active.add(to.id);
 		updateStatus();
-		await message.channel.send("**Reposting " + dir + " `" + (channel.name || id) + "`!**").catch(console.error);
-		await sendInfo(direction ? channel : message.channel, direction ? message.channel : channel, webhook);
+		await message.channel.send("**Reposting" + (live ? " live " : " ") + dir + " `" + (channel.name || id) + "`!**").catch(console.error);
+		if (live) {
+			const hook = webhook && await fetchWebhook(to);
+			information.live[from.id] = { channel: to, hook: hook };
+		} else {
+			await sendInfo(from, to, webhook);
+		}
 	}
 }
 
@@ -426,6 +446,7 @@ function sendCommands(channel) {
 	rich.addField("Repost To", "*Reposts to a channel.*```" + prefix + "repost <CHANNEL>\n" + prefix + "repost to <CHANNEL>```", false);
 	rich.addField("Repost From", "*Reposts from a channel.*```" + prefix + "repost from <CHANNEL>```", false);
 	rich.addField("Repost Webhook", "*Reposts through a webhook.*```" + prefix + "reposthook\n" + prefix + "repostwebhook```Instead of:```" + prefix + "repost```", false);
+	rich.addField("Repost Live", "*Reposts messages as they come.*```" + prefix + "repostlive\n" + prefix + "repostlivehook```Instead of:```" + prefix + "repost```", false);
 	rich.addField("Repost Stop", "*Stops reposting.*```" + prefix + "repost stop\n" + prefix + "repost halt\n" + prefix + "repost cease\n" + prefix + "repost terminate\n" + prefix + "repost suspend\n" + prefix + "repost cancel\n" + prefix + "repost die\n" + prefix + "repost end```", false);
 	rich.addField("Repost Commands", "*Posts the command list.*```" + prefix + "repost help\n" + prefix + "repost commands```", false);
 	rich.addField("Repost Replace", "*Replaces text when reposting.*```" + prefix + "repost replace <FIND> <REPLACE>```", false);
@@ -439,6 +460,10 @@ function sendCommands(channel) {
 }
 
 client.on("message", function(message) {
+	const live = information.live[message.channel.id];
+	if (live) {
+		sendMessage(message, live.channel, live.hook);
+	}
 	if (message.author.bot) return;
 	const args = message.content.toLowerCase().split(" ");
 	const prefix = information.prefixes[(message.guild || message.channel).id] || "/";
@@ -455,14 +480,15 @@ client.on("message", function(message) {
 			setBoolean(message.channel, args[1], args[2]);
 		} else if (args[1] === "stop" || args[1] === "halt" || args[1] === "cease" || args[1] === "terminate" || args[1] === "suspend" || args[1] === "cancel" || args[1] === "die" || args[1] === "end") {
 			information.active.delete(message.channel.id);
+			information.live[message.channel.id] = undefined;
 			updateStatus();
-			message.channel.send("**Reposting Terminated!**").catch(console.log);
+			message.channel.send("**Reposting Terminated!**").catch(console.error);
 		} else {
 			const last = args[2];
 			if (last) {
-				repost(last, message, args[0].endsWith("hook"), args[1] === "from");
+				repost(last, message, args[0].indexOf("hook") !== -1, args[1] === "from", args[0].indexOf("live") !== -1);
 			} else {
-				repost(args[1], message, args[0].endsWith("hook"), false);
+				repost(args[1], message, args[0].indexOf("hook") !== -1, false, args[0].indexOf("live") !== -1);
 			}
 		}
 	}
