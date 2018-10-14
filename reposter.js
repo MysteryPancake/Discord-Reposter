@@ -12,6 +12,36 @@ client.on("ready", function() {
 	console.log("READY FOR ACTION!");
 });
 
+const information = {
+	active: new Set(),
+	replacements: {},
+	nicknames: {},
+	prefixes: {},
+	tags: {},
+	pins: {},
+	live: {}
+};
+
+const enable = { "1": true, "true": true, "yes": true, "confirm": true, "agree": true, "enable": true, "on": true, "positive": true, "accept": true, "ye": true, "yep": true, "ya": true, "yah": true, "yeah": true, "sure": true, "ok": true, "okay": true };
+const disable = { "0": true, "false": true, "no": true, "deny": true, "denied": true, "disagree": true, "disable": true, "off": true, "negative": true, "-1": true, "nah": true, "na": true, "nope": true, "stop": true, "end": true, "cease": true };
+const whitelist = { text: true, group: true, dm: true };
+
+function updateStatus() {
+	client.user.setActivity(information.active.size + " repost" + (information.active.size === 1 ? "" : "s"), { type: "WATCHING" }).catch(console.error);
+}
+
+function capitalizeFirst(str) {
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function inactive(to, from) {
+	if (from) {
+		return !information.active.has(from) || !information.active.has(to);
+	} else {
+		return !information.active.has(to);
+	}
+}
+
 async function send(channel, content, reactions) {
 	const channelID = channel.channelID || channel.id;
 	if (inactive(channelID)) return;
@@ -57,19 +87,6 @@ function richEmbed(embed) {
 	return rich;
 }
 
-const information = {
-	active: new Set(),
-	replacements: {},
-	nicknames: {},
-	prefixes: {},
-	tags: {},
-	pins: {},
-	live: {}
-};
-
-const enable = { "1": true, "true": true, "yes": true, "confirm": true, "agree": true, "enable": true, "on": true, "positive": true, "accept": true, "ye": true, "yep": true, "ya": true, "yah": true, "yeah": true, "sure": true, "ok": true, "okay": true };
-const disable = { "0": true, "false": true, "no": true, "deny": true, "denied": true, "disagree": true, "disable": true, "off": true, "negative": true, "-1": true, "nah": true, "na": true, "nope": true, "stop": true, "end": true, "cease": true };
-
 function setBoolean(channel, key, value) {
 	const guild = (channel.guild || channel).id;
 	const enabled = information[key][guild];
@@ -83,14 +100,6 @@ function setBoolean(channel, key, value) {
 	} else {
 		information[key][guild] = !enabled;
 		channel.send((enabled ? "❌" : "✅") + " **" + property + " toggled " + (enabled ? "off" : "on") + "!**").catch(console.error);
-	}
-}
-
-function inactive(to, from) {
-	if (from) {
-		return !information.active.has(from) || !information.active.has(to);
-	} else {
-		return !information.active.has(to);
 	}
 }
 
@@ -251,10 +260,6 @@ async function fetchMessages(message, channel, webhook, author) {
 	}
 }
 
-function capitalizeFirst(str) {
-	return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
 async function fetchWebhook(channel) {
 	const webhooks = await channel.fetchWebhooks().catch(async function() {
 		await channel.send("**Can't read webhooks!**").catch(console.error);
@@ -350,12 +355,6 @@ async function sendInfo(from, to, hook) {
 		await to.send("**Repost Complete!**").catch(console.error);
 	}
 }
-
-function updateStatus() {
-	client.user.setActivity(information.active.size + " repost" + (information.active.size === 1 ? "" : "s"), { type: "WATCHING" }).catch(console.error);
-}
-
-const whitelist = { text: true, group: true, dm: true };
 
 async function repost(id, message, webhook, direction, live) {
 	const channel = (id && id.id) ? id : client.channels.get(id);
