@@ -67,14 +67,12 @@ However, the bot needs to be in both servers for this to work.
 `/repost pins` or `/repost pins <STATE>`
 
 ## Setup
-1. [Create your app](https://discordapp.com/developers/applications/me).
-2. Click `Create a Bot User`.
-3. Copy your bot's secret token and [paste it on this line](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js#L9).
-4. Go to `https://discordapp.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot`, with `<CLIENT_ID>` as your app's client ID.
-5. [Install node.js](https://nodejs.org/en/download): `brew install node`
-6. [Install discord.js](https://github.com/hydrabolt/discord.js): `npm install discord.js`
-7. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js): `npm start`
-8. Find the channel you want to repost from, and in that channel say `/repost to <CHANNEL>`, with `<CHANNEL>` as the channel you want to repost to.
-9. Hope it works!
+1. [Create your app with a Bot](https://discordapp.com/developers/applications/me).
+2. Copy your bot's secret token and [paste it on this line](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js#L9).
+3. Go to `https://discordapp.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot`, with `<CLIENT_ID>` as your app's client ID.
+4. [Install Node.js](https://nodejs.org/en/download): `brew install node`
+5. [Install the dependencies](https://github.com/MysteryPancake/Discord-Reposter/blob/master/package.json#L36-L38): `npm install`
+6. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js): `npm start`
+7. Hope it works!
 
 ![Icon](repost.png?raw=true)
