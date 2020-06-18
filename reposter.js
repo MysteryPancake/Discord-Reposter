@@ -33,10 +33,6 @@ if (fs.existsSync("config.json")) {
 	updateJson();
 }
 
-const enable = { "1": true, "true": true, "yes": true, "confirm": true, "agree": true, "enable": true, "on": true, "positive": true, "accept": true, "ye": true, "yep": true, "ya": true, "yah": true, "yeah": true, "sure": true, "ok": true, "okay": true };
-const disable = { "0": true, "false": true, "no": true, "deny": true, "denied": true, "disagree": true, "disable": true, "off": true, "negative": true, "-1": true, "nah": true, "na": true, "nope": true, "stop": true, "end": true, "cease": true };
-const whitelist = { text: true, group: true, dm: true };
-
 function updateStatus() {
 	const size = Object.keys(config.active).length;
 	client.user.setActivity(size + " repost" + (size === 1 ? "" : "s"), { type: "WATCHING" }).catch(console.error);
@@ -99,10 +95,10 @@ function setBoolean(channel, key, value) {
 	const guild = (channel.guild || channel).id;
 	const enabled = config[key][guild];
 	const property = capitalizeFirst(key);
-	if (enable[value]) {
+	if (value.match(/1|true|yes|confirm|agree|enable|on|positive|accept|ye|yep|ya|yah|yeah|sure|ok|okay/)) {
 		config[key][guild] = true;
 		channel.send("✅ **" + property + " on!**").catch(console.error);
-	} else if (disable[value]) {
+	} else if (value.match(/0|false|no|deny|denied|disagree|disable|off|negative|-1|nah|na|nope|stop|end|cease/)) {
 		config[key][guild] = false;
 		channel.send("❌ **" + property + " off!**").catch(console.error);
 	} else {
@@ -425,7 +421,7 @@ async function repost(id, message, webhook, direction, live) {
 		}
 	} else if (channel.id === message.channel.id) {
 		await message.channel.send("**Can't repost " + dir + " the same channel!**").catch(console.error);
-	} else if (!whitelist[channel.type]) {
+	} else if (!channel.type.match(/text|group|dm/)) {
 		await message.channel.send("**Can't repost " + dir + " " + channel.type + " channels!**").catch(console.error);
 	} else if (webhook && (direction ? message.channel.type : channel.type) === "dm") {
 		await message.channel.send("**Can't create webhooks on DM channels!**").catch(console.error);
@@ -453,7 +449,7 @@ async function repostLive(message) {
 	if (live) {
 		const channel = client.channels.get(live.channel);
 		const hook = live.hook && await fetchWebhook(channel);
-		sendMessage(message, channel, hook);
+		await sendMessage(message, channel, hook);
 	}
 }
 
