@@ -43,7 +43,21 @@ function capitalizeFirst(str) {
 }
 
 function inactive(to, from) {
-	return from && !config.active[from] || !config.active[to];
+	return from ? !config.active[from] : !config.active[to];
+}
+
+function replaceAll(channel, str) {
+	const replace = config.replacements[(channel.guild || channel).id];
+	if (replace) {
+		let replaced = str;
+		for (let find in replace) {
+			const regex = new RegExp(find, "g");
+			replaced = replaced.replace(regex, replace[find]);
+		}
+		return replaced;
+	} else {
+		return str;
+	}
 }
 
 async function send(channel, content, reactions) {
@@ -186,20 +200,6 @@ async function sendReplacements(channel, id) {
 		}
 	} else {
 		channel.send("**This channel has no replacements!**").catch(console.error);
-	}
-}
-
-function replaceAll(channel, str) {
-	const replace = config.replacements[(channel.guild || channel).id];
-	if (replace) {
-		let replaced = str;
-		for (let find in replace) {
-			const regex = new RegExp(find, "g");
-			replaced = replaced.replace(regex, replace[find]);
-		}
-		return replaced;
-	} else {
-		return str;
 	}
 }
 
