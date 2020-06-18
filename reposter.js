@@ -61,21 +61,21 @@ async function send(channel, content, reactions) {
 	}
 }
 
-function richEmbed(embed) {
+function richEmbed(embed, channel) {
 	const rich = new Discord.RichEmbed();
 	if (embed.author) {
-		rich.setAuthor(embed.author.name, embed.author.iconURL, embed.author.url);
+		rich.setAuthor(replaceAll(channel, embed.author.name), embed.author.iconURL, embed.author.url);
 	}
 	rich.setColor(embed.color);
 	if (embed.description) {
-		rich.setDescription(embed.description);
+		rich.setDescription(replaceAll(channel, embed.description));
 	}
 	for (let i = 0; i < embed.fields.length; i++) {
 		const field = embed.fields[i];
-		rich.addField(field.name, field.value, field.inline);
+		rich.addField(replaceAll(channel, field.name), replaceAll(channel, field.value), field.inline);
 	}
 	if (embed.footer) {
-		rich.setFooter(embed.footer.text, embed.footer.iconURL);
+		rich.setFooter(replaceAll(channel, embed.footer.text), embed.footer.iconURL);
 	}
 	if (embed.image) {
 		rich.setImage(embed.image.url);
@@ -85,7 +85,7 @@ function richEmbed(embed) {
 	}
 	rich.setTimestamp(embed.timestamp);
 	if (embed.title) {
-		rich.setTitle(embed.title);
+		rich.setTitle(replaceAll(channel, embed.title));
 	}
 	rich.setURL(embed.url);
 	return rich;
@@ -236,7 +236,7 @@ async function sendMessage(message, channel, webhook, author) {
 		for (let i = 0; i < message.embeds.length; i++) {
 			const embed = message.embeds[i];
 			if (embed.type === "rich") {
-				await send(webhook ? webhook : channel, richEmbed(embed), message.reactions);
+				await send(webhook ? webhook : channel, richEmbed(embed, channel), message.reactions);
 			}
 		}
 	}
@@ -284,7 +284,7 @@ async function fetchWebhook(channel) {
 	}
 }
 
-async function sendInfo(to, from, hook) {
+async function sendInfo(to, from) {
 	const rich = new Discord.RichEmbed();
 	rich.setTitle(from.name || from.id);
 	rich.setDescription(from.topic || "No topic");
@@ -343,27 +343,6 @@ async function sendInfo(to, from, hook) {
 		rich.addField("Channel Members", from.recipients.size, true);
 	}
 	await to.send(rich).catch(console.error);
-	if (inactive(to.id, from.id)) return;
-	const webhook = hook && await fetchWebhook(to);
-	if (config.pins[(to.guild || to).id]) {
-		await to.send("__**Pins**__").catch(console.error);
-		const pins = await from.fetchPinnedMessages().catch(async function() {
-			await to.send("**Can't read pins!**").catch(console.error);
-		});
-		await sendMessages(pins, to, webhook);
-	}
-	if (inactive(to.id, from.id)) return;
-	await to.send("__**Messages**__").catch(console.error);
-	const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(async function() {
-		await to.send("**Can't read messages!**").catch(console.error);
-	});
-	const first = messages && messages.first();
-	if (first) {
-		await sendMessage(first, to, webhook);
-		await fetchMessages(first, to, webhook, first.author.id);
-	} else {
-		await to.send("**Repost Complete!**").catch(console.error);
-	}
 }
 
 async function repost(id, message, webhook, direction, live) {
@@ -439,7 +418,28 @@ async function repost(id, message, webhook, direction, live) {
 			config.live[from.id] = { channel: to.id, hook: webhook };
 			updateJson();
 		} else {
-			await sendInfo(to, from, webhook);
+			await sendInfo(to, from);
+			if (inactive(to.id, from.id)) return;
+			const hook = webhook && await fetchWebhook(to);
+			if (config.pins[(to.guild || to).id]) {
+				await to.send("__**Pins**__").catch(console.error);
+				const pins = await from.fetchPinnedMessages().catch(async function() {
+					await to.send("**Can't read pins!**").catch(console.error);
+				});
+				await sendMessages(pins, to, hook);
+			}
+			if (inactive(to.id, from.id)) return;
+			await to.send("__**Messages**__").catch(console.error);
+			const messages = await from.fetchMessages({ limit: 1, after: "0" }).catch(async function() {
+				await to.send("**Can't read messages!**").catch(console.error);
+			});
+			const first = messages && messages.first();
+			if (first) {
+				await sendMessage(first, to, hook);
+				await fetchMessages(first, to, hook, first.author.id);
+			} else {
+				await to.send("**Repost Complete!**").catch(console.error);
+			}
 		}
 	}
 }
@@ -485,29 +485,55 @@ client.on("message", function(message) {
 	const args = message.content.toLowerCase().split(" ");
 	const prefix = config.prefixes[(message.guild || message.channel).id] || "/";
 	if (args[0].startsWith(prefix + "repost")) {
-		if (!args[1] || args[1] === "help" || args[1] === "commands") {
+		switch (args[1]) {
+		case undefined:
+		case "help":
+		case "commands": {
 			sendCommands(message.channel);
-		} else if (args[1] === "replacements") {
+			break;
+		}
+		case "replacements": {
 			sendReplacements(message.channel, message.author.id);
-		} else if (args[1] === "replace") {
+			break;
+		}
+		case "replace": {
 			setReplacement(message.channel, args[2], args[3]);
-		} else if (args[1] === "prefix") {
+			break;
+		}
+		case "prefix": {
 			setPrefix(message.channel, args[2]);
-		} else if (args[1] === "tags" || args[1] === "nicknames" || args[1] === "pins") {
+			break;
+		}
+		case "tags":
+		case "nicknames":
+		case "pins": {
 			setBoolean(message.channel, args[1], args[2]);
-		} else if (args[1] === "stop" || args[1] === "halt" || args[1] === "cease" || args[1] === "terminate" || args[1] === "suspend" || args[1] === "cancel" || args[1] === "die" || args[1] === "end") {
+			break;
+		}
+		case "stop":
+		case "halt":
+		case "cease":
+		case "terminate":
+		case "suspend":
+		case "cancel":
+		case "die":
+		case "end": {
 			delete config.active[message.channel.id];
 			delete config.live[message.channel.id];
 			updateStatus();
 			updateJson();
 			message.channel.send("**Reposting Terminated!**").catch(console.error);
-		} else {
+			break;
+		}
+		default: {
 			const last = args[2];
 			if (last) {
 				repost(last, message, args[0].indexOf("hook") !== -1, args[1] === "from", args[0].indexOf("live") !== -1);
 			} else {
 				repost(args[1], message, args[0].indexOf("hook") !== -1, false, args[0].indexOf("live") !== -1);
 			}
+			break;
+		}
 		}
 	}
 });
