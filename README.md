@@ -74,5 +74,3 @@ However, the bot needs to be in both servers for this to work.
 5. [Install the dependencies](https://github.com/MysteryPancake/Discord-Reposter/blob/master/package.json#L36-L38): `npm install`
 6. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js): `npm start`
 7. Hope it works!
-
-![Icon](repost.png?raw=true)
