@@ -75,4 +75,4 @@ However, the bot needs to be in both servers for this to work.
 6. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js): `npm start`
 7. Hope it works!
 
-<img src="repost.png?raw=true" width="128">
+<img src="repost.png?raw=true" width="256">
