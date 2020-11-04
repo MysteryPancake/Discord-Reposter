@@ -70,9 +70,9 @@ However, the bot needs to be in both servers for this to work.
 
 ## Setup
 1. [Create your app with a Bot](https://discordapp.com/developers/applications/me).
-2. Copy your bot's secret token and [paste it on this line](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js#L9).
+2. Copy your bot's secret token and [paste it on this line](reposter.js#L9).
 3. Go to `https://discordapp.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot`, with `<CLIENT_ID>` as your app's client ID.
 4. [Install Node.js](https://nodejs.org/en/download): `brew install node`
-5. [Install the dependencies](https://github.com/MysteryPancake/Discord-Reposter/blob/master/package.json#L36-L38): `npm install`
-6. [Run the bot](https://github.com/MysteryPancake/Discord-Reposter/blob/master/reposter.js): `npm start`
+5. [Install the dependencies](package.json#L36-L38): `npm install`
+6. [Run the bot](reposter.js): `npm start`
 7. Hope it works!
