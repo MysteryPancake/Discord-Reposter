@@ -83,10 +83,10 @@ function replaceEmbedText(embed, channel) {
 	if (embed.description) {
 		embed.setDescription(replaceAll(channel, embed.description));
 	}
-	for (let i = 0; i < embed.fields.length; i++) {
+	/*for (let i = 0; i < embed.fields.length; i++) {
 		const field = embed.fields[i];
 		embed.addField(replaceAll(channel, field.name), replaceAll(channel, field.value), field.inline);
-	}
+	}*/
 	if (embed.footer) {
 		embed.setFooter(replaceAll(channel, embed.footer.text), embed.footer.iconURL);
 	}
