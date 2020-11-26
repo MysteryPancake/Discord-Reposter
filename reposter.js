@@ -455,7 +455,7 @@ async function repostLive(message) {
 
 function sendCommands(channel) {
 	const prefix = config.prefixes[(channel.guild || channel).id] || "/";
-	const rich = new Discord.RichEmbed();
+	const rich = new Discord.MessageEmbed();
 	rich.setTitle("Reposter Commands");
 	rich.setDescription("By MysteryPancake");
 	rich.setFooter(client.user.id, client.user.displayAvatarURL);
